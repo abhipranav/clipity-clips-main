@@ -1,3 +1,6 @@
+import { mkdtemp, rm } from "fs/promises";
+import { tmpdir } from "os";
+import { basename, join } from "path";
 import type { ProviderSet } from "../providers/factory";
 import { loadConfig } from "../config";
 import type { PipelineRun, StageResult, ClipProgressSnapshot } from "../pipeline/types";
@@ -251,6 +254,83 @@ export async function getLibrary(): Promise<Response> {
   } catch (err) {
     log.error(`Failed to get library: ${err}`);
     return errorResponse("Failed to get library", 500);
+  }
+}
+
+// GET /api/library/:videoId/download
+export async function downloadLibraryGroup(videoId: string): Promise<Response> {
+  let tempDirPath: string | null = null;
+
+  try {
+    const { checkpoint, artifact } = getProviders();
+    const normalizedVideoId = videoId.trim();
+
+    if (!normalizedVideoId) {
+      return errorResponse("Missing videoId", 400);
+    }
+
+    const runs = await checkpoint.listRuns();
+    const completedRuns = runs.filter(
+      (run) => run.status === "completed" && run.videoId === normalizedVideoId,
+    );
+
+    const finalReelRefs: string[] = [];
+    for (const run of completedRuns) {
+      const clipProgress = await checkpoint.getClipProgressList(run.id);
+      for (const clip of clipProgress) {
+        const finalReelPath = clip.artifactPaths.finalReelPath;
+        if (finalReelPath) {
+          finalReelRefs.push(finalReelPath);
+        }
+      }
+    }
+
+    if (finalReelRefs.length === 0) {
+      return errorResponse("No final reels found for this video", 404);
+    }
+
+    tempDirPath = await mkdtemp(join(tmpdir(), "clipity-library-"));
+    const downloadedPaths: string[] = [];
+
+    for (let index = 0; index < finalReelRefs.length; index++) {
+      const ref = finalReelRefs[index];
+      const baseName = basename(ref).replace(/[^a-zA-Z0-9._-]/g, "_") || `clip-${index + 1}.mp4`;
+      const localPath = join(tempDirPath, `${String(index + 1).padStart(2, "0")}-${baseName}`);
+      await artifact.download(ref, localPath);
+      downloadedPaths.push(localPath);
+    }
+
+    const zipName = `${normalizedVideoId}-clips.zip`;
+    const zipPath = join(tempDirPath, zipName);
+    const zipProc = Bun.spawn(["zip", "-j", zipPath, ...downloadedPaths], {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+    const exitCode = await zipProc.exited;
+    if (exitCode !== 0) {
+      const stderr = await new Response(zipProc.stderr).text();
+      log.error(`Failed to create ZIP archive: ${stderr}`);
+      return errorResponse("Failed to create ZIP archive. Ensure 'zip' is installed on the server.", 500);
+    }
+
+    const zipFile = Bun.file(zipPath);
+    const zipBuffer = await zipFile.arrayBuffer();
+
+    return new Response(zipBuffer, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/zip",
+        "Content-Disposition": `attachment; filename="${zipName}"`,
+      },
+    });
+  } catch (err) {
+    log.error(`Failed to download library group: ${err}`);
+    return errorResponse("Failed to prepare download", 500);
+  } finally {
+    if (tempDirPath) {
+      await rm(tempDirPath, { recursive: true, force: true });
+    }
   }
 }
 

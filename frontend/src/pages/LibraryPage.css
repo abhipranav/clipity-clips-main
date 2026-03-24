@@ -60,6 +60,32 @@
   font-weight: 500;
 }
 
+.group-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.group-download-all {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.group-download-all:hover {
+  border-color: var(--color-border-strong);
+  color: var(--color-accent);
+  background: var(--color-bg);
+}
+
 .clips-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

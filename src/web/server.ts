@@ -179,6 +179,11 @@ const server = Bun.serve({
       } else if (pathname.startsWith("/api/runs/") && request.method === "GET") {
         const runId = pathname.replace("/api/runs/", "");
         response = await api.getRun(runId);
+      } else if (pathname.startsWith("/api/library/") && pathname.endsWith("/download") && request.method === "GET") {
+        const videoId = decodeURIComponent(
+          pathname.replace("/api/library/", "").replace("/download", "").replace(/\/$/, ""),
+        );
+        response = await api.downloadLibraryGroup(videoId);
       } else if (pathname === "/api/library" && request.method === "GET") {
         response = await api.getLibrary();
       } else if (pathname === "/api/queue" && request.method === "GET") {

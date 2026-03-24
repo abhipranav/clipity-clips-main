@@ -55,7 +55,17 @@ export function LibraryPage(): ReactElement {
                   <Film size={20} className="group-icon" />
                   <h2 className="group-title">{group.videoTitle}</h2>
                 </div>
-                <span className="group-count">{group.clipCount} clips</span>
+                <div className="group-actions">
+                  <span className="group-count">{group.clipCount} clips</span>
+                  <a
+                    href={`/api/library/${encodeURIComponent(group.videoId)}/download`}
+                    className="group-download-all"
+                    title="Download all clips"
+                  >
+                    <Download size={14} />
+                    <span>Download all</span>
+                  </a>
+                </div>
               </div>
               <div className="clips-grid">
                 {group.clips.map((clip, clipIndex) => (
