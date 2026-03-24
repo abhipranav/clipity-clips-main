@@ -7,8 +7,15 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    precheck:
     steps:
+      outputs:
+        should_deploy: ${{ steps.resolve.outputs.should_deploy }}
+        host: ${{ steps.resolve.outputs.host }}
+        user: ${{ steps.resolve.outputs.user }}
+        port: ${{ steps.resolve.outputs.port }}
+        app_dir: ${{ steps.resolve.outputs.app_dir }}
+        ssh_key: ${{ steps.resolve.outputs.ssh_key }}
       - name: Resolve deploy configuration
         id: resolve
         env:
@@ -37,10 +44,14 @@ jobs:
           if [ -z "$EC2_PORT" ]; then EC2_PORT="${VAR_EC2_PORT:-22}"; fi
           if [ -z "$EC2_APP_DIR" ]; then EC2_APP_DIR="${VAR_EC2_APP_DIR:-/home/ubuntu/clipity-clips-main}"; fi
 
-          if [ -z "$EC2_HOST" ] || [ -z "$EC2_USER" ] || [ -z "$EC2_SSH_KEY" ]; then
-            echo "Missing deploy config. Set EC2_HOST, EC2_USER, EC2_SSH_KEY in repo Secrets (or Variables)."
-            exit 1
-          fi
+            SHOULD_DEPLOY=true
+            if [ -z "$EC2_HOST" ] || [ -z "$EC2_USER" ] || [ -z "$EC2_SSH_KEY" ]; then
+              SHOULD_DEPLOY=false
+              echo "Deploy config not available in this workflow context."
+              echo "Set EC2_HOST, EC2_USER, EC2_SSH_KEY as Repository Secrets in this same repo."
+            fi
+
+            echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
 
           echo "host=$EC2_HOST" >> "$GITHUB_OUTPUT"
           echo "user=$EC2_USER" >> "$GITHUB_OUTPUT"
@@ -50,16 +61,22 @@ jobs:
           echo "$EC2_SSH_KEY" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
 
+    deploy:
+      needs: precheck
+      if: ${{ needs.precheck.outputs.should_deploy == 'true' }}
+      runs-on: ubuntu-latest
+      steps:
+
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ steps.resolve.outputs.host }}
-          username: ${{ steps.resolve.outputs.user }}
-          key: ${{ steps.resolve.outputs.ssh_key }}
+            host: ${{ needs.precheck.outputs.host }}
+            username: ${{ needs.precheck.outputs.user }}
+            key: ${{ needs.precheck.outputs.ssh_key }}
+            port: ${{ needs.precheck.outputs.port }}
           port: ${{ steps.resolve.outputs.port }}
           script_stop: true
           script: |
-            set -euo pipefail
+              export APP_DIR="${{ needs.precheck.outputs.app_dir }}"
             export APP_DIR="${{ steps.resolve.outputs.app_dir }}"
             export PATH="$HOME/.bun/bin:$PATH"
 
