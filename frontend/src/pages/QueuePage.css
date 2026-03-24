@@ -1,0 +1,248 @@
+.queue-page {
+  max-width: 800px;
+}
+
+.page-header-bar {
+  margin-bottom: var(--space-xl);
+}
+
+.page-title {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.queue-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.queue-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+}
+
+.queue-stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-xl);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.stat-icon {
+  margin-bottom: var(--space-md);
+  color: var(--color-text-tertiary);
+}
+
+.stat-icon.queued {
+  color: var(--color-caution);
+}
+
+.stat-icon.running {
+  color: var(--color-accent);
+  animation: spin 2s linear infinite;
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--color-text-tertiary);
+  margin-top: var(--space-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.worker-status-card,
+.failures-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+}
+
+.card-title {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0 0 var(--space-lg);
+}
+
+.worker-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.worker-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.worker-badge.connected {
+  background: rgba(45, 90, 61, 0.1);
+  color: var(--color-success);
+}
+
+.worker-badge.disconnected {
+  background: rgba(181, 66, 66, 0.1);
+  color: var(--color-error);
+}
+
+.worker-mode {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.mode-value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-transform: lowercase;
+}
+
+.queue-alert {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: rgba(201, 162, 39, 0.1);
+  color: var(--color-caution);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  margin-bottom: var(--space-md);
+}
+
+.worker-note {
+  font-size: 0.875rem;
+  color: var(--color-text-tertiary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.failures-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.failure-item {
+  padding: var(--space-md);
+  background: rgba(181, 66, 66, 0.05);
+  border: 1px solid rgba(181, 66, 66, 0.2);
+  border-radius: var(--radius-md);
+}
+
+.failure-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+
+.failure-run {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.failure-time {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.failure-error {
+  font-size: 0.875rem;
+  color: var(--color-error);
+  margin: 0;
+}
+
+.error-container {
+  text-align: center;
+  padding: var(--space-3xl);
+}
+
+.error-icon {
+  color: var(--color-error);
+  margin-bottom: var(--space-lg);
+}
+
+.error-container h2 {
+  margin-bottom: var(--space-sm);
+}
+
+.error-container p {
+  color: var(--color-text-tertiary);
+}
+
+/* Skeleton */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-solid) 25%,
+    var(--color-bg) 50%,
+    var(--color-surface-solid) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
+}
+
+.skeleton-header {
+  height: 40px;
+  width: 200px;
+  margin-bottom: var(--space-xl);
+}
+
+.skeleton-stat {
+  height: 150px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .queue-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .worker-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+  }
+}

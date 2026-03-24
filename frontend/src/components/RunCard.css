@@ -1,0 +1,127 @@
+.run-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  text-decoration: none;
+}
+
+.run-card:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.run-card.compact {
+  padding: var(--space-sm) var(--space-md);
+}
+
+.run-card-status {
+  flex-shrink: 0;
+}
+
+.status-icon {
+  opacity: 0.7;
+}
+
+.status-icon.completed {
+  color: var(--color-success);
+}
+
+.status-icon.failed {
+  color: var(--color-error);
+}
+
+.status-icon.running {
+  color: var(--color-accent);
+  animation: spin 1s linear infinite;
+}
+
+.status-icon.queued {
+  color: var(--color-caution);
+}
+
+.run-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.run-card-title {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.run-card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+}
+
+.run-card-date {
+  font-size: 0.875rem;
+  color: var(--color-text-tertiary);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+.status-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-solid);
+}
+
+.status-badge.status-queued {
+  color: var(--color-caution);
+}
+
+.status-badge.status-running {
+  color: var(--color-accent);
+}
+
+.status-badge.status-completed {
+  color: var(--color-success);
+}
+
+.status-badge.status-failed {
+  color: var(--color-error);
+}
+
+.run-stage {
+  font-size: 0.875rem;
+  color: var(--color-text-tertiary);
+  font-family: var(--font-mono);
+}
+
+.run-card-details {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-border);
+}
+
+.run-date {
+  font-size: 0.875rem;
+  color: var(--color-text-tertiary);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
