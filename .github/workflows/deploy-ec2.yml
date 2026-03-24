@@ -9,32 +9,58 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Validate deploy secrets
+      - name: Resolve deploy configuration
+        id: resolve
         env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ${{ secrets.EC2_USER }}
-          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          SECRET_EC2_HOST: ${{ secrets.EC2_HOST }}
+          SECRET_EC2_USER: ${{ secrets.EC2_USER }}
+          SECRET_EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          SECRET_EC2_PORT: ${{ secrets.EC2_PORT }}
+          SECRET_EC2_APP_DIR: ${{ secrets.EC2_APP_DIR }}
+          VAR_EC2_HOST: ${{ vars.EC2_HOST }}
+          VAR_EC2_USER: ${{ vars.EC2_USER }}
+          VAR_EC2_SSH_KEY: ${{ vars.EC2_SSH_KEY }}
+          VAR_EC2_PORT: ${{ vars.EC2_PORT }}
+          VAR_EC2_APP_DIR: ${{ vars.EC2_APP_DIR }}
         run: |
           set -euo pipefail
-          if [ -z "${EC2_HOST}" ] || [ -z "${EC2_USER}" ] || [ -z "${EC2_SSH_KEY}" ]; then
-            echo "Missing required secrets. Set EC2_HOST, EC2_USER, and EC2_SSH_KEY in repo settings."
+
+          EC2_HOST="${SECRET_EC2_HOST:-}"
+          EC2_USER="${SECRET_EC2_USER:-}"
+          EC2_SSH_KEY="${SECRET_EC2_SSH_KEY:-}"
+          EC2_PORT="${SECRET_EC2_PORT:-}"
+          EC2_APP_DIR="${SECRET_EC2_APP_DIR:-}"
+
+          if [ -z "$EC2_HOST" ]; then EC2_HOST="${VAR_EC2_HOST:-}"; fi
+          if [ -z "$EC2_USER" ]; then EC2_USER="${VAR_EC2_USER:-}"; fi
+          if [ -z "$EC2_SSH_KEY" ]; then EC2_SSH_KEY="${VAR_EC2_SSH_KEY:-}"; fi
+          if [ -z "$EC2_PORT" ]; then EC2_PORT="${VAR_EC2_PORT:-22}"; fi
+          if [ -z "$EC2_APP_DIR" ]; then EC2_APP_DIR="${VAR_EC2_APP_DIR:-/home/ubuntu/clipity-clips-main}"; fi
+
+          if [ -z "$EC2_HOST" ] || [ -z "$EC2_USER" ] || [ -z "$EC2_SSH_KEY" ]; then
+            echo "Missing deploy config. Set EC2_HOST, EC2_USER, EC2_SSH_KEY in repo Secrets (or Variables)."
             exit 1
           fi
+
+          echo "host=$EC2_HOST" >> "$GITHUB_OUTPUT"
+          echo "user=$EC2_USER" >> "$GITHUB_OUTPUT"
+          echo "port=$EC2_PORT" >> "$GITHUB_OUTPUT"
+          echo "app_dir=$EC2_APP_DIR" >> "$GITHUB_OUTPUT"
+          echo "ssh_key<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$EC2_SSH_KEY" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: ${{ secrets.EC2_PORT != '' && secrets.EC2_PORT || '22' }}
+          host: ${{ steps.resolve.outputs.host }}
+          username: ${{ steps.resolve.outputs.user }}
+          key: ${{ steps.resolve.outputs.ssh_key }}
+          port: ${{ steps.resolve.outputs.port }}
           script_stop: true
           script: |
             set -euo pipefail
-            export APP_DIR="${{ secrets.EC2_APP_DIR }}"
-            if [ -z "$APP_DIR" ]; then
-              APP_DIR="/home/ubuntu/clipity-clips-main"
-            fi
+            export APP_DIR="${{ steps.resolve.outputs.app_dir }}"
             export PATH="$HOME/.bun/bin:$PATH"
 
             cd "$APP_DIR"
