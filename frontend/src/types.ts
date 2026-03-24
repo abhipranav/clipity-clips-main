@@ -250,6 +250,13 @@ export interface SystemHealth {
     checkpoint: boolean;
     queue: boolean;
     geminiApi: boolean;
+    worker: boolean;
+    dependencies: boolean;
+    ffmpeg: boolean;
+    ytDlp: boolean;
+    python3: boolean;
+    zip: boolean;
+    whisperCli: boolean;
   };
   message?: string;
 }

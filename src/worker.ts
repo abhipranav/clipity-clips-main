@@ -68,11 +68,12 @@ async function processJob(
 async function workerLoop(
   workerConfig: WorkerConfig,
   orchestrator: PipelineOrchestrator,
-  providers: Awaited<ReturnType<typeof createProviders>>
+  providers: Awaited<ReturnType<typeof createProviders>>,
+  isShuttingDown: () => boolean,
 ): Promise<void> {
   let activeJobs = 0;
 
-  while (true) {
+  while (!isShuttingDown()) {
     if (activeJobs >= workerConfig.concurrency) {
       await new Promise((resolve) => setTimeout(resolve, workerConfig.pollIntervalMs));
       continue;
@@ -93,6 +94,11 @@ async function workerLoop(
     void processJob(message.runId, orchestrator, providers).then(() => {
       activeJobs--;
     });
+  }
+
+  while (activeJobs > 0) {
+    log.info(`Waiting for ${activeJobs} active job(s) to finish before shutdown...`);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 }
 
@@ -145,7 +151,7 @@ async function main(): Promise<void> {
   });
 
   try {
-    await workerLoop(workerConfig, orchestrator, providers);
+    await workerLoop(workerConfig, orchestrator, providers, () => shuttingDown);
   } catch (err) {
     log.error(`Worker loop error: ${err}`);
     throw err;

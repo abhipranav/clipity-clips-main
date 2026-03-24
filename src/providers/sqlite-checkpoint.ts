@@ -74,6 +74,19 @@ export class SqliteCheckpointStore implements CheckpointStore {
         FOREIGN KEY (run_id) REFERENCES pipeline_runs(id)
       );
     `);
+
+    this.ensurePipelineRunsColumns();
+  }
+
+  private ensurePipelineRunsColumns(): void {
+    const columns = this.db
+      .prepare("PRAGMA table_info(pipeline_runs)")
+      .all() as Array<{ name: string }>;
+    const columnNames = new Set(columns.map((column) => column.name));
+
+    if (!columnNames.has("job_options_json")) {
+      this.db.exec("ALTER TABLE pipeline_runs ADD COLUMN job_options_json TEXT");
+    }
   }
 
   async createQueuedRun(videoUrl: string, videoId: string, videoTitle: string, jobOptions?: ResolvedJobOptions): Promise<PipelineRun> {
@@ -156,13 +169,17 @@ export class SqliteCheckpointStore implements CheckpointStore {
 
   async getRunJobOptions(runId: string): Promise<ResolvedJobOptions | null> {
     const row = this.db.prepare("SELECT job_options_json FROM pipeline_runs WHERE id = ?").get(runId) as { job_options_json: string | null } | undefined;
-    if (!row?.job_options_json) {
+    if (!row) {
       return null;
+    }
+
+    if (!row.job_options_json) {
+      return DEFAULT_RESOLVED_OPTIONS;
     }
     try {
       return JSON.parse(row.job_options_json) as ResolvedJobOptions;
     } catch {
-      return null;
+      return DEFAULT_RESOLVED_OPTIONS;
     }
   }
 

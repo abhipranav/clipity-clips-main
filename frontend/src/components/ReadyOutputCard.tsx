@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { buildArtifactUrl } from "@/artifacts";
 import type { ReadyOutput } from "@/types";
 import { Play, Download, ExternalLink } from "./icons";
 import "./ReadyOutputCard.css";
@@ -23,10 +24,19 @@ function formatDate(dateString: string): string {
 
 export function ReadyOutputCard({ output }: ReadyOutputCardProps): ReactElement {
   const duration = output.duration || 15;
+  const artifactUrl = buildArtifactUrl(output.finalReelPath);
 
   return (
     <div className="ready-output-card">
       <div className="output-preview">
+        <video
+          className="output-video"
+          src={artifactUrl}
+          muted
+          playsInline
+          preload="metadata"
+          controls
+        />
         <div className="output-thumbnail">
           <Play size={24} className="play-icon" />
         </div>
@@ -41,7 +51,7 @@ export function ReadyOutputCard({ output }: ReadyOutputCardProps): ReactElement 
       </div>
       <div className="output-actions">
         <a
-          href={`/artifacts/${output.finalReelPath}`}
+          href={artifactUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="output-action"
@@ -50,7 +60,7 @@ export function ReadyOutputCard({ output }: ReadyOutputCardProps): ReactElement 
           <ExternalLink size={16} />
         </a>
         <a
-          href={`/artifacts/${output.finalReelPath}`}
+          href={artifactUrl}
           download
           className="output-action"
           title="Download"

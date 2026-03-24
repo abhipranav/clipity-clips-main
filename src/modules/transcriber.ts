@@ -2,7 +2,7 @@ import { createLogger } from "../utils/logger";
 import { secondsToSrtTimestamp } from "../utils/ffmpeg";
 import type { Config } from "../config";
 import type { TranscriptSegment, Transcript, VideoMetadata } from "../pipeline/types";
-import { join } from "path";
+import { dirname, join } from "path";
 
 const log = createLogger("transcriber");
 
@@ -62,9 +62,12 @@ print(json.dumps(snippets))
     config: Config,
   ): Promise<Transcript> {
     log.info(`Running Whisper (model: ${config.whisperModel})...`);
+    const whisperCacheDir = Bun.env.WHISPER_CACHE_DIR ?? join(dirname(outputDir), "models", "whisper");
+    await Bun.$`mkdir -p ${whisperCacheDir}`.quiet();
+
     const script = `
 import whisper, json, sys
-model = whisper.load_model("${config.whisperModel}")
+model = whisper.load_model("${config.whisperModel}", download_root="${whisperCacheDir}")
 result = model.transcribe("${metadata.filePath}", language="en")
 segments = [{"text": s["text"].strip(), "start": s["start"], "end": s["end"], "duration": s["end"] - s["start"]} for s in result["segments"]]
 print(json.dumps(segments))

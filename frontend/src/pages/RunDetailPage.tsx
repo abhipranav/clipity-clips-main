@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { api } from "@/api";
+import { buildArtifactUrl } from "@/artifacts";
 import { ArrowLeft, Clock, CheckCircle, AlertCircle, RefreshCw, Download, ExternalLink, Settings } from "@/components/icons";
 import type { StageResult } from "@/types";
 import "./RunDetailPage.css";
@@ -136,7 +137,7 @@ export function RunDetailPage(): ReactElement {
                 <div className="clip-stage">{clip.currentStage}</div>
                 {clip.artifactPaths.finalReelPath && (
                   <a
-                    href={`/artifacts/${clip.artifactPaths.finalReelPath}`}
+                    href={buildArtifactUrl(clip.artifactPaths.finalReelPath)}
                     download
                     className="clip-download"
                   >
@@ -158,7 +159,7 @@ export function RunDetailPage(): ReactElement {
               <div key={index} className="output-item">
                 <span className="output-name">Clip {index + 1}</span>
                 <a
-                  href={`/artifacts/${path}`}
+                  href={buildArtifactUrl(path)}
                   download
                   className="output-download"
                 >

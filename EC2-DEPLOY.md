@@ -4,7 +4,7 @@
 This guide deploys Clipity on a single EC2 instance using **local mode**:
 - SQLite database (stored on EBS volume)
 - Local file system for videos and outputs
-- In-process queue (no SQS needed)
+- Local SQLite-backed queue with a single worker service (no SQS needed)
 - Self-contained on one server
 
 ## Prerequisites
@@ -68,6 +68,9 @@ Optional settings:
 ```env
 WHISPER_MODEL=base          # tiny/base/small/medium/large
 MAX_PARALLEL_CLIPS=3        # 1-10
+WORKER_CONCURRENCY=1
+WORKER_POLL_INTERVAL_MS=2000
+WHISPER_CACHE_DIR=/opt/clipity/models/whisper
 OUTPUT_WIDTH=1080
 OUTPUT_HEIGHT=1920
 PORT=3000
@@ -87,7 +90,10 @@ scp -i your-key.pem -r . ubuntu@YOUR_EC2_IP:/opt/clipity/
 ssh -i your-key.pem ubuntu@YOUR_EC2_IP
 cd /opt/clipity
 bun install
+bun run build
 ```
+
+The production web server serves the built frontend from `frontend/dist`, so `bun run build` is required before starting `clipity-web`.
 
 ---
 
@@ -112,6 +118,12 @@ sudo systemctl start clipity-worker
 # Check status
 sudo systemctl status clipity-web
 sudo systemctl status clipity-worker
+```
+
+Recommended order:
+```bash
+sudo systemctl start clipity-worker
+sudo systemctl start clipity-web
 ```
 
 ---
@@ -245,12 +257,22 @@ df -h
 # Videos and outputs are in /opt/clipity/output/
 ```
 
+### Check Frontend Build
+```bash
+ls -lah /opt/clipity/frontend/dist
+```
+
 ### Database Backup
 ```bash
 # SQLite is at /opt/clipity/data/checkpoints.db
 # Backup to S3 (optional):
 aws s3 cp /opt/clipity/data/checkpoints.db s3://your-backup-bucket/clipity-$(date +%Y%m%d).db
 ```
+
+### Important Operational Notes
+- Run only one `clipity-worker` service when using the local SQLite queue. The current queue implementation is intended for a single worker process on one machine.
+- The server also needs `zip`, `ffmpeg`, `yt-dlp`, `youtube-transcript-api`, and `openai-whisper` installed for all web and pipeline features to work.
+- Whisper model downloads should be cached on disk. The setup script uses `WHISPER_CACHE_DIR=/opt/clipity/models/whisper` so the model survives restarts.
 
 ---
 

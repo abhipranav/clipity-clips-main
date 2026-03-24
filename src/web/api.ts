@@ -28,6 +28,7 @@ import {
 } from "../job-options/types";
 
 const log = createLogger("api");
+const workerHeartbeatWindowMs = 2 * 60 * 1000;
 
 let providers: ProviderSet | null = null;
 
@@ -41,6 +42,74 @@ function getProviders(): ProviderSet {
     throw new Error("Providers not initialized. Call setProviders() first.");
   }
   return providers;
+}
+
+async function checkBinary(name: string, args: string[] = ["--version"]): Promise<boolean> {
+  try {
+    const proc = Bun.spawn([name, ...args], { stdout: "ignore", stderr: "ignore" });
+    const exitCode = await proc.exited;
+    return exitCode === 0;
+  } catch {
+    return false;
+  }
+}
+
+function hasRecentWorkerActivity(runs: PipelineRun[]): boolean {
+  const cutoff = Date.now() - workerHeartbeatWindowMs;
+  return runs.some((run) => {
+    if (run.status !== "running") {
+      return false;
+    }
+    const updatedAt = new Date(run.updatedAt).getTime();
+    return Number.isFinite(updatedAt) && updatedAt >= cutoff;
+  });
+}
+
+async function getDependencyHealth(): Promise<{
+  ffmpeg: boolean;
+  ytDlp: boolean;
+  python3: boolean;
+  zip: boolean;
+  whisperCli: boolean;
+}> {
+  const [ffmpeg, ytDlp, python3, zip, whisperCli] = await Promise.all([
+    checkBinary("ffmpeg", ["-version"]),
+    checkBinary("yt-dlp", ["--version"]),
+    checkBinary("python3", ["--version"]),
+    checkBinary("zip", ["-v"]),
+    checkBinary("whisper-cli", ["-h"]),
+  ]);
+
+  return { ffmpeg, ytDlp, python3, zip, whisperCli };
+}
+
+async function resolveExistingFinalReelPath(
+  finalReelPath: string | undefined,
+  videoId: string,
+  clipIndex: number,
+): Promise<string | null> {
+  if (!finalReelPath) {
+    return null;
+  }
+
+  const directFile = Bun.file(finalReelPath);
+  if (await directFile.exists()) {
+    return finalReelPath;
+  }
+
+  const outputDir = join(process.cwd(), "output", videoId);
+  const dir = Bun.file(outputDir);
+  if (!(await dir.exists())) {
+    return finalReelPath;
+  }
+
+  const files = await Array.fromAsync(dir.values());
+  const candidates = files
+    .map((file) => file.name)
+    .filter((name) => name.toLowerCase().endsWith(".mp4"))
+    .sort((a, b) => a.localeCompare(b));
+
+  return candidates[clipIndex] ? join("output", videoId, candidates[clipIndex]) : finalReelPath;
 }
 
 // GET /api/app-summary
@@ -70,7 +139,12 @@ export async function getAppSummary(): Promise<Response> {
     for (const run of completedRuns) {
       const clipProgress = await checkpoint.getClipProgressList(run.id);
       for (const clip of clipProgress) {
-        if (clip.artifactPaths.finalReelPath) {
+        const finalReelPath = await resolveExistingFinalReelPath(
+          clip.artifactPaths.finalReelPath,
+          run.videoId,
+          clip.clipIndex,
+        );
+        if (finalReelPath) {
           readyOutputs.push({
             runId: run.id,
             videoTitle: run.videoTitle || run.videoId,
@@ -78,7 +152,7 @@ export async function getAppSummary(): Promise<Response> {
             clipTitle: `Clip ${clip.clipIndex + 1}`,
             hookLine: clip.artifactPaths.hookText || "Extracted short-form clip",
             duration: clip.artifactPaths.duration ? Math.round(Number(clip.artifactPaths.duration)) : 15,
-            finalReelPath: clip.artifactPaths.finalReelPath,
+            finalReelPath,
             createdAt: clip.updatedAt,
           });
         }
@@ -96,8 +170,9 @@ export async function getAppSummary(): Promise<Response> {
     const queueHealthCheck = await queue.healthCheck();
     const queueHealthy = queueHealthCheck.healthy;
     const config = loadConfig();
+    const workerConnected = queueHealthy && (stats.runningRuns > 0 || stats.queuedRuns === 0 || hasRecentWorkerActivity(runs));
     const workerHealth = {
-      connected: queueHealthy,
+      connected: workerConnected,
       mode: config.appMode,
     };
 
@@ -187,7 +262,20 @@ export async function getRun(runId: string): Promise<Response> {
     }
 
     const stageResults = await checkpoint.getStageResults(runId);
-    const clipProgress = await checkpoint.getClipProgressList(runId);
+    const clipProgressRaw = await checkpoint.getClipProgressList(runId);
+    const clipProgress = await Promise.all(
+      clipProgressRaw.map(async (clip) => ({
+        ...clip,
+        artifactPaths: {
+          ...clip.artifactPaths,
+          finalReelPath: await resolveExistingFinalReelPath(
+            clip.artifactPaths.finalReelPath,
+            run.videoId,
+            clip.clipIndex,
+          ) ?? undefined,
+        },
+      })),
+    );
     const finalReels = clipProgress
       .map((clip) => clip.artifactPaths.finalReelPath)
       .filter((path): path is string => Boolean(path));
@@ -232,13 +320,18 @@ export async function getLibrary(): Promise<Response> {
       const group = groups.get(run.videoId)!;
       
       for (const clip of clipProgress) {
-        if (clip.artifactPaths.finalReelPath) {
+        const finalReelPath = await resolveExistingFinalReelPath(
+          clip.artifactPaths.finalReelPath,
+          run.videoId,
+          clip.clipIndex,
+        );
+        if (finalReelPath) {
           group.clips.push({
             clipId: clip.clipId,
             title: `Clip ${clip.clipIndex + 1}`,
             hookLine: clip.artifactPaths.hookText || "Extracted short-form clip",
             duration: clip.artifactPaths.duration ? Math.round(Number(clip.artifactPaths.duration)) : 15,
-            finalReelPath: clip.artifactPaths.finalReelPath,
+            finalReelPath,
             createdAt: clip.updatedAt,
           });
         }
@@ -355,11 +448,14 @@ export async function getQueue(): Promise<Response> {
         failedAt: r.updatedAt,
       }));
 
+    const queueHealthCheck = await queue.healthCheck();
+    const workerConnected = queueHealthCheck.healthy && (runningCount > 0 || queuedCount === 0 || hasRecentWorkerActivity(runs));
+
     return jsonResponse({
       queuedCount,
       runningCount,
       workerMode: config.appMode,
-      workerConnected: true, // Simplified
+      workerConnected,
       recentFailures,
     });
   } catch (err) {
@@ -440,6 +536,7 @@ export async function getSystemHealth(): Promise<Response> {
   try {
     const { checkpoint, queue } = getProviders();
     const config = loadConfig();
+    const runs = await checkpoint.listRuns();
 
     // Check checkpoint
     const checkpointHealthy = await checkpoint.getRun("health-check").then(() => true).catch(() => false);
@@ -450,8 +547,11 @@ export async function getSystemHealth(): Promise<Response> {
 
     // Check Gemini API
     const geminiHealthy = !!config.geminiApiKey;
+    const dependencyHealth = await getDependencyHealth();
+    const dependenciesHealthy = Object.values(dependencyHealth).every(Boolean);
+    const workerHealthy = queueHealthy && (runs.filter((run) => run.status === "queued").length === 0 || hasRecentWorkerActivity(runs));
 
-    const allHealthy = checkpointHealthy && queueHealthy && geminiHealthy;
+    const allHealthy = checkpointHealthy && queueHealthy && geminiHealthy && dependenciesHealthy && workerHealthy;
 
     return jsonResponse({
       status: allHealthy ? "healthy" : "degraded",
@@ -459,6 +559,13 @@ export async function getSystemHealth(): Promise<Response> {
         checkpoint: checkpointHealthy,
         queue: queueHealthy,
         geminiApi: geminiHealthy,
+        worker: workerHealthy,
+        dependencies: dependenciesHealthy,
+        ffmpeg: dependencyHealth.ffmpeg,
+        ytDlp: dependencyHealth.ytDlp,
+        python3: dependencyHealth.python3,
+        zip: dependencyHealth.zip,
+        whisperCli: dependencyHealth.whisperCli,
       },
       message: allHealthy ? undefined : "Some services are experiencing issues",
     });
@@ -470,6 +577,13 @@ export async function getSystemHealth(): Promise<Response> {
         checkpoint: false,
         queue: false,
         geminiApi: false,
+        worker: false,
+        dependencies: false,
+        ffmpeg: false,
+        ytDlp: false,
+        python3: false,
+        zip: false,
+        whisperCli: false,
       },
       message: "Health check failed",
     });
