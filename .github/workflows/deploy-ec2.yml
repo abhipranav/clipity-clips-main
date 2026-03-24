@@ -6,81 +6,44 @@ on:
     branches: [main]
 
 jobs:
-  precheck:
-    runs-on: ubuntu-latest
-    outputs:
-      should_deploy: ${{ steps.resolve.outputs.should_deploy }}
-      host: ${{ steps.resolve.outputs.host }}
-      user: ${{ steps.resolve.outputs.user }}
-      port: ${{ steps.resolve.outputs.port }}
-      app_dir: ${{ steps.resolve.outputs.app_dir }}
-      ssh_key: ${{ steps.resolve.outputs.ssh_key }}
+  deploy:
+    runs-on: [self-hosted, linux, x64]
+    concurrency:
+      group: deploy-ec2
+      cancel-in-progress: true
     steps:
-      - name: Resolve deploy configuration
-        id: resolve
-        env:
-          SECRET_EC2_HOST: ${{ secrets.EC2_HOST }}
-          SECRET_EC2_USER: ${{ secrets.EC2_USER }}
-          SECRET_EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
-          SECRET_EC2_PORT: ${{ secrets.EC2_PORT }}
-          SECRET_EC2_APP_DIR: ${{ secrets.EC2_APP_DIR }}
-          VAR_EC2_HOST: ${{ vars.EC2_HOST }}
-          VAR_EC2_USER: ${{ vars.EC2_USER }}
-          VAR_EC2_SSH_KEY: ${{ vars.EC2_SSH_KEY }}
-          VAR_EC2_PORT: ${{ vars.EC2_PORT }}
-          VAR_EC2_APP_DIR: ${{ vars.EC2_APP_DIR }}
+      - name: Resolve app directory
+        id: config
         run: |
           set -euo pipefail
 
-          EC2_HOST="${SECRET_EC2_HOST:-}"
-          EC2_USER="${SECRET_EC2_USER:-}"
-          EC2_SSH_KEY="${SECRET_EC2_SSH_KEY:-}"
-          EC2_PORT="${SECRET_EC2_PORT:-}"
-          EC2_APP_DIR="${SECRET_EC2_APP_DIR:-}"
-
-          if [ -z "$EC2_HOST" ]; then EC2_HOST="${VAR_EC2_HOST:-}"; fi
-          if [ -z "$EC2_USER" ]; then EC2_USER="${VAR_EC2_USER:-}"; fi
-          if [ -z "$EC2_SSH_KEY" ]; then EC2_SSH_KEY="${VAR_EC2_SSH_KEY:-}"; fi
-          if [ -z "$EC2_PORT" ]; then EC2_PORT="${VAR_EC2_PORT:-22}"; fi
-          if [ -z "$EC2_APP_DIR" ]; then EC2_APP_DIR="${VAR_EC2_APP_DIR:-/home/ubuntu/clipity-clips-main}"; fi
-
-          SHOULD_DEPLOY=true
-          if [ -z "$EC2_HOST" ] || [ -z "$EC2_USER" ] || [ -z "$EC2_SSH_KEY" ]; then
-            SHOULD_DEPLOY=false
-            echo "Deploy config not available in this workflow context."
-            echo "Set EC2_HOST, EC2_USER, EC2_SSH_KEY as Repository Secrets in this same repo."
+          APP_DIR="${{ vars.EC2_APP_DIR }}"
+          if [ -z "$APP_DIR" ]; then
+            APP_DIR="/home/ubuntu/clipity-clips-main"
           fi
 
-          echo "should_deploy=$SHOULD_DEPLOY" >> "$GITHUB_OUTPUT"
-          echo "host=$EC2_HOST" >> "$GITHUB_OUTPUT"
-          echo "user=$EC2_USER" >> "$GITHUB_OUTPUT"
-          echo "port=$EC2_PORT" >> "$GITHUB_OUTPUT"
-          echo "app_dir=$EC2_APP_DIR" >> "$GITHUB_OUTPUT"
-          echo "ssh_key<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$EC2_SSH_KEY" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          if [ ! -d "$APP_DIR/.git" ]; then
+            echo "App repo not found at $APP_DIR"
+            exit 1
+          fi
 
-  deploy:
-    needs: precheck
-    if: ${{ needs.precheck.outputs.should_deploy == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ needs.precheck.outputs.host }}
-          username: ${{ needs.precheck.outputs.user }}
-          key: ${{ needs.precheck.outputs.ssh_key }}
-          port: ${{ needs.precheck.outputs.port }}
-          script_stop: true
-          script: |
-            set -euo pipefail
-            export APP_DIR="${{ needs.precheck.outputs.app_dir }}"
-            export PATH="$HOME/.bun/bin:$PATH"
+          echo "app_dir=$APP_DIR" >> "$GITHUB_OUTPUT"
 
-            cd "$APP_DIR"
-            git fetch origin main
-            git checkout main
-            git reset --hard origin/main
+      - name: Deploy on self-hosted runner
+        run: |
+          set -euo pipefail
+          export APP_DIR="${{ steps.config.outputs.app_dir }}"
+          export PATH="$HOME/.bun/bin:$PATH"
 
-            bash scripts/deploy-ec2.sh
+          cd "$APP_DIR"
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
+
+          bash scripts/deploy-ec2.sh
+
+      - name: Show deployed commit
+        run: |
+          set -euo pipefail
+          cd "${{ steps.config.outputs.app_dir }}"
+          git rev-parse --short HEAD
