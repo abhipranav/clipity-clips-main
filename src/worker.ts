@@ -60,6 +60,16 @@ async function processJob(
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     log.error(`Failed to process run ${runId}: ${errorMessage}`);
+
+    const run = await providers.checkpoint.getRun(runId);
+    if (!run || run.status !== "queued") {
+      await providers.queue.ack(runId);
+      log.warn(
+        `Dropping queue message for run ${runId} because run status is '${run?.status ?? "missing"}'`
+      );
+      return false;
+    }
+
     await providers.queue.release(runId, errorMessage);
     return false;
   }
