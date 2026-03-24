@@ -1,0 +1,19 @@
+[Unit]
+Description=Clipity Worker
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/clipity
+Environment=NODE_ENV=production
+EnvironmentFile=/opt/clipity/.env
+ExecStart=/home/ubuntu/.bun/bin/bun run src/worker.ts
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=clipity-worker
+
+[Install]
+WantedBy=multi-user.target
