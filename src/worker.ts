@@ -8,6 +8,7 @@ const log = createLogger("worker");
 interface WorkerConfig {
   concurrency: number;
   pollIntervalMs: number;
+  maxAttempts: number;
 }
 
 async function checkBinary(name: string, args: string[] = ["--version"]): Promise<boolean> {
@@ -50,7 +51,8 @@ async function runPreflightChecks(): Promise<void> {
 async function processJob(
   runId: string,
   orchestrator: PipelineOrchestrator,
-  providers: Awaited<ReturnType<typeof createProviders>>
+  providers: Awaited<ReturnType<typeof createProviders>>,
+  maxAttempts: number
 ): Promise<boolean> {
   try {
     await orchestrator.runQueuedRun(runId);
@@ -65,8 +67,14 @@ async function processJob(
     if (!run || run.status !== "queued") {
       await providers.queue.ack(runId);
       log.warn(
-        `Dropping queue message for run ${runId} because run status is '${run?.status ?? "missing"}'`
+        `Dropping queue message for run ${runId} because run status is '${run?.status ?? "missing"}'`,
       );
+      return false;
+    }
+
+    if (errorMessage.includes("not queued")) {
+      log.warn(`Run ${runId} is not in queued status, removing from queue`);
+      await providers.queue.ack(runId);
       return false;
     }
 
@@ -101,7 +109,7 @@ async function workerLoop(
     activeJobs++;
 
     // Process job concurrently
-    void processJob(message.runId, orchestrator, providers).then(() => {
+    void processJob(message.runId, orchestrator, providers, workerConfig.maxAttempts).then(() => {
       activeJobs--;
     });
   }
@@ -134,6 +142,7 @@ async function main(): Promise<void> {
   const workerConfig: WorkerConfig = {
     concurrency: config.workerConcurrency,
     pollIntervalMs: config.workerPollIntervalMs,
+    maxAttempts: 3,
   };
 
   log.info(`Worker configuration:`);

@@ -1,6 +1,6 @@
-import { mkdtemp, rm } from "fs/promises";
+import { mkdtemp, readdir, rm } from "fs/promises";
 import { tmpdir } from "os";
-import { basename, join } from "path";
+import { basename, join, resolve } from "path";
 import type { ProviderSet } from "../providers/factory";
 import { loadConfig } from "../config";
 import type { PipelineRun, StageResult, ClipProgressSnapshot } from "../pipeline/types";
@@ -92,24 +92,38 @@ async function resolveExistingFinalReelPath(
     return null;
   }
 
-  const directFile = Bun.file(finalReelPath);
-  if (await directFile.exists()) {
-    return finalReelPath;
+  const outputDirRelative = join("output", videoId);
+  const outputDirAbsolute = join(process.cwd(), outputDirRelative);
+  const candidateRefs = [
+    finalReelPath,
+    join(outputDirRelative, basename(finalReelPath)),
+    join(outputDirAbsolute, basename(finalReelPath)),
+    resolve(finalReelPath),
+  ];
+
+  for (const candidate of candidateRefs) {
+    const file = Bun.file(candidate);
+    if (await file.exists()) {
+      return candidate;
+    }
   }
 
-  const outputDir = join(process.cwd(), "output", videoId);
-  const dir = Bun.file(outputDir);
-  if (!(await dir.exists())) {
-    return finalReelPath;
+  try {
+    const entries = await readdir(outputDirAbsolute, { withFileTypes: true });
+    const reelFiles = entries
+      .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".mp4"))
+      .map((entry) => entry.name)
+      .sort((a, b) => a.localeCompare(b));
+
+    if (reelFiles.length > 0) {
+      const targetFile = reelFiles[clipIndex] ?? reelFiles[0];
+      return join(outputDirRelative, targetFile);
+    }
+  } catch {
+    return null;
   }
 
-  const files = await Array.fromAsync(dir.values());
-  const candidates = files
-    .map((file) => file.name)
-    .filter((name) => name.toLowerCase().endsWith(".mp4"))
-    .sort((a, b) => a.localeCompare(b));
-
-  return candidates[clipIndex] ? join("output", videoId, candidates[clipIndex]) : finalReelPath;
+  return null;
 }
 
 // GET /api/app-summary

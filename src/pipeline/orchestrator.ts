@@ -412,9 +412,13 @@ export class PipelineOrchestrator {
         jobOptions,
         artifacts.captionOverlayPath,
       );
+      const artifactKey =
+        this.config.artifactBackend === "local"
+          ? join(this.config.paths.output, metadata.videoId, `${clip.id}_reel.mp4`)
+          : `${metadata.videoId}/${clip.id}_reel.mp4`;
       // Publish to artifact store (S3 in cloud mode, local in local mode)
       const artifact = await this.artifactStore.publish(localReelPath, {
-        key: `${metadata.videoId}/${clip.id}_reel.mp4`,
+        key: artifactKey,
       });
       artifacts.finalReelPath = artifact.ref;
       log.info(`Published reel to: ${artifacts.finalReelPath}`);
