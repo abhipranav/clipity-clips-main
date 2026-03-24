@@ -9,17 +9,32 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Validate deploy secrets
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${EC2_HOST}" ] || [ -z "${EC2_USER}" ] || [ -z "${EC2_SSH_KEY}" ]; then
+            echo "Missing required secrets. Set EC2_HOST, EC2_USER, and EC2_SSH_KEY in repo settings."
+            exit 1
+          fi
+
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          port: ${{ secrets.EC2_PORT || 22 }}
+          port: ${{ secrets.EC2_PORT != '' && secrets.EC2_PORT || '22' }}
           script_stop: true
           script: |
             set -euo pipefail
-            export APP_DIR="${{ secrets.EC2_APP_DIR || '/home/ubuntu/clipity-clips-main' }}"
+            export APP_DIR="${{ secrets.EC2_APP_DIR }}"
+            if [ -z "$APP_DIR" ]; then
+              APP_DIR="/home/ubuntu/clipity-clips-main"
+            fi
             export PATH="$HOME/.bun/bin:$PATH"
 
             cd "$APP_DIR"
