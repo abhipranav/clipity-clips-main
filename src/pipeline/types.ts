@@ -62,6 +62,12 @@ export interface Transcript {
   srtPath: string | null;
 }
 
+export interface BrollBlock {
+  category: string;
+  start: number;
+  end: number;
+}
+
 export interface ClipCandidate {
   id: string;
   title: string;
@@ -72,6 +78,7 @@ export interface ClipCandidate {
   reasoning: string;
   viralScore: number;
   tags: string[];
+  broll: BrollBlock[];
 }
 
 export interface ClipArtifacts {

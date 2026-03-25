@@ -20,8 +20,20 @@ const CLIP_SCHEMA = {
           reasoning: { type: "string" as const },
           viralScore: { type: "number" as const },
           tags: { type: "array" as const, items: { type: "string" as const } },
+          broll: {
+            type: "array" as const,
+            items: {
+              type: "object" as const,
+              properties: {
+                category: { type: "string" as const },
+                start: { type: "number" as const },
+                end: { type: "number" as const },
+              },
+              required: ["category", "start", "end"],
+            },
+          },
         },
-        required: ["title", "hookLine", "startTime", "endTime", "reasoning", "viralScore", "tags"],
+        required: ["title", "hookLine", "startTime", "endTime", "reasoning", "viralScore", "tags", "broll"],
       },
     },
   },
@@ -63,6 +75,11 @@ Each clip MUST:
 IMPORTANT: The timestamps in the transcript are in SECONDS (e.g., 533.0s means 533 seconds into the video).
 Return startTime and endTime as numbers in SECONDS (not minutes:seconds). For example, if a clip starts at 8 minutes 53 seconds, return startTime: 533.
 
+B-ROLL BLOCKS:
+For each clip, also define 0 to 3 \`broll\` blocks where visual stock footage should be overlayed (to hide boring pauses or add emphasis).
+The \`category\` MUST be exactly one of the following: "finance", "tech", "nature", "abstract".
+The \`start\` and \`end\` are absolute SECONDS in the original video timestamp.
+
 TRANSCRIPT:
 ${formattedTranscript}
 
@@ -87,6 +104,7 @@ Return clips sorted by viralScore (highest first). Aim for 5-15 clips depending 
         reasoning: string;
         viralScore: number;
         tags: string[];
+        broll: Array<{ category: string; start: number; end: number }>;
       }>;
     };
 
@@ -121,6 +139,7 @@ Return clips sorted by viralScore (highest first). Aim for 5-15 clips depending 
         reasoning: c.reasoning,
         viralScore: c.viralScore,
         tags: c.tags,
+        broll: c.broll || [],
       }))
       .sort((a, b) => b.viralScore - a.viralScore);
 

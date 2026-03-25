@@ -3,16 +3,19 @@ import type { CheckpointStore } from "./checkpoint";
 import type { QueueProvider } from "./queue";
 import type { ArtifactStore } from "./artifact";
 import type { SettingsStore } from "./settings";
+import type { UserStore } from "../auth/store";
 import { SqliteCheckpointStore } from "./sqlite-checkpoint";
 import { SqliteQueueProvider } from "./sqlite-queue";
 import { SqliteSettingsStore } from "./sqlite-settings";
 import { LocalArtifactStore } from "./local-artifact";
+import { SqliteUserStore } from "../auth/store";
 
 export interface ProviderSet {
   checkpoint: CheckpointStore;
   queue: QueueProvider;
   artifact: ArtifactStore;
   settings: SettingsStore;
+  userStore: UserStore;
 }
 
 export async function createProviders(config: Config): Promise<ProviderSet> {
@@ -20,7 +23,8 @@ export async function createProviders(config: Config): Promise<ProviderSet> {
   const queue = await createQueueProvider(config);
   const artifact = createArtifactStore(config);
   const settings = await createSettingsStore(config);
-  return { checkpoint, queue, artifact, settings };
+  const userStore = new SqliteUserStore(config.paths.checkpointDb);
+  return { checkpoint, queue, artifact, settings, userStore };
 }
 
 async function createCheckpointStore(config: Config): Promise<CheckpointStore> {

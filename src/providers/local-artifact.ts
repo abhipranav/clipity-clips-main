@@ -1,4 +1,4 @@
-import { resolve, basename, dirname } from "path";
+import { resolve, dirname } from "path";
 import type { ArtifactStore } from "./artifact";
 import type { ArtifactMetadata, ArtifactReference } from "../pipeline/types";
 import { ensureDir } from "../utils/fs";

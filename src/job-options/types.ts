@@ -41,6 +41,10 @@ export interface OutputOptions {
   splitScreenMode: SplitScreenMode;
   clipSpeed: number;
   captionAnimate: boolean;
+  brainrotType: BrainrotType;
+  brainrotClipIdx: number | 'random';
+  brollMode: BrollMode;
+  brollClipIdx: number | 'random';
 }
 
 export interface ClipSelectionOptions {
@@ -102,6 +106,10 @@ export const DEFAULT_OUTPUT_OPTIONS: OutputOptions = {
   splitScreenMode: "auto",
   clipSpeed: 1.2,
   captionAnimate: true,
+  brainrotType: "random",
+  brainrotClipIdx: "random",
+  brollMode: "none",
+  brollClipIdx: "random",
 };
 
 export const DEFAULT_CLIP_SELECTION: ClipSelectionOptions = {
@@ -155,6 +163,22 @@ export const SUPPORTED_TEXT_CASES: TextCaseMode[] = [
   "uppercase",
 ];
 
+export const SUPPORTED_BRAINROT_TYPES = [
+  "random",
+  "none",
+  "gta-parkour",
+  "minecraft-parkour",
+  "subway-surfers",
+  "satisfying",
+  "finance",
+  "tech",
+  "nature"
+] as const;
+export type BrainrotType = typeof SUPPORTED_BRAINROT_TYPES[number];
+
+export const SUPPORTED_BROLL_MODES = ["auto", "none", "finance", "tech", "nature"] as const;
+export type BrollMode = typeof SUPPORTED_BROLL_MODES[number];
+
 // Aspect preset dimensions
 export function getAspectDimensions(preset: AspectPreset): { width: number; height: number } {
   switch (preset) {
@@ -196,6 +220,14 @@ export function isValidAspectPreset(preset: string): preset is AspectPreset {
 
 export function isValidTextCase(mode: string): mode is TextCaseMode {
   return SUPPORTED_TEXT_CASES.includes(mode as TextCaseMode);
+}
+
+export function isValidBrainrotType(type: string): type is BrainrotType {
+  return SUPPORTED_BRAINROT_TYPES.includes(type as BrainrotType);
+}
+
+export function isValidBrollMode(mode: string): mode is BrollMode {
+  return SUPPORTED_BROLL_MODES.includes(mode as BrollMode);
 }
 
 // Settings resolution: merge global defaults with per-job overrides

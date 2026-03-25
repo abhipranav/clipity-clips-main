@@ -5,12 +5,13 @@ import {
   secondsToFfmpegTimestamp,
   getVideoDuration,
 } from "../utils/ffmpeg";
-import { listFiles, randomItem, fileExists, ensureDir } from "../utils/fs";
+import { fileExists, ensureDir } from "../utils/fs";
 import type { Config } from "../config";
 import type { ClipCandidate } from "../pipeline/types";
-import type { ResolvedJobOptions, SplitScreenMode } from "../job-options/types";
-import { getAspectDimensions } from "../job-options/types";
+import type { ResolvedJobOptions } from "../job-options/types";
+import { getAspectDimensions, SUPPORTED_BRAINROT_TYPES } from "../job-options/types";
 import { join, dirname } from "path";
+import { readdirSync, existsSync } from "fs";
 
 const log = createLogger("video-processor");
 
@@ -144,6 +145,7 @@ export class VideoProcessor {
     config: Config,
     outputPath: string,
     jobOptions: ResolvedJobOptions,
+    clip: ClipCandidate,
     captionOverlayPath?: string | null,
   ): Promise<string> {
     ensureDir(dirname(outputPath));
@@ -153,36 +155,45 @@ export class VideoProcessor {
       return outputPath;
     }
 
-    const surferFiles = listFiles(config.paths.subwaySurfers, ".mp4");
     const splitMode = jobOptions.output.splitScreenMode;
+    const brainrotType = jobOptions.output.brainrotType;
+
+    // Resolve brainrot video path using the new private method
+    let brainrotPath: string | null = null;
+    try {
+      brainrotPath = await this.resolveBrainrotVideo(jobOptions);
+    } catch (error) {
+      log.warn(`Could not resolve brainrot video: ${error instanceof Error ? error.message : "unknown error"}`);
+      // If brainrot cannot be resolved, proceed without split-screen
+    }
 
     // Determine if we should use split-screen based on mode and availability
     let useSplitScreen = false;
     if (splitMode === "never") {
       useSplitScreen = false;
     } else if (splitMode === "always") {
-      if (surferFiles.length === 0) {
-        throw new Error("Split-screen mode is 'always' but no supporting footage (subway-surfers) is available");
+      if (!brainrotPath) {
+        throw new Error(`Split-screen mode is 'always' but no supporting footage (${brainrotType}) is available`);
       }
       useSplitScreen = true;
     } else {
       // auto: use split-screen if assets available
-      useSplitScreen = surferFiles.length > 0;
+      useSplitScreen = !!brainrotPath;
     }
 
     if (!useSplitScreen) {
       log.info("Creating single-video reel (split-screen disabled or no assets)");
-      return this.composeSingleReel(clipPath, config, outputPath, jobOptions, captionOverlayPath);
+      return this.composeSingleReel(clipPath, config, outputPath, jobOptions, clip, captionOverlayPath);
     }
 
-    const surferPath = randomItem(surferFiles);
-    const surferDuration = await getVideoDuration(surferPath);
+    // brainrotPath is guaranteed to be not null here if useSplitScreen is true
+    const brainrotDuration = await getVideoDuration(brainrotPath!);
     const clipDuration = await getVideoDuration(clipPath);
 
     const speed = jobOptions.output.clipSpeed;
     const effectiveClipDuration = clipDuration / speed;
-    const maxOffset = Math.max(0, surferDuration - effectiveClipDuration);
-    const surferOffset = Math.random() * maxOffset;
+    const maxOffset = Math.max(0, brainrotDuration - effectiveClipDuration);
+    const brainrotOffset = Math.random() * maxOffset;
 
     // Derive dimensions from aspect preset
     const { width: w, height: h } = getAspectDimensions(jobOptions.output.aspectPreset);
@@ -207,9 +218,9 @@ export class VideoProcessor {
 
     const inputs = [
       "-ss",
-      secondsToFfmpegTimestamp(surferOffset),
+      secondsToFfmpegTimestamp(brainrotOffset),
       "-i",
-      surferPath,
+      brainrotPath!, // Use the resolved brainrotPath
       "-i",
       clipPath,
     ];
@@ -252,6 +263,7 @@ export class VideoProcessor {
     config: Config,
     outputPath: string,
     jobOptions: ResolvedJobOptions,
+    clip: ClipCandidate,
     captionOverlayPath?: string | null,
   ): Promise<string> {
     // Derive dimensions from aspect preset
@@ -263,16 +275,19 @@ export class VideoProcessor {
       `[0:v]fps=30,setpts=PTS/${speed},scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h}[base];` +
       `[0:a]atempo=${speed}[afast]`;
 
-    if (hasCaptions) {
-      filterComplex +=
-        `;[1:v]fps=30,scale=${w}:${h},colorkey=0x00FF00:0.3:0.1[captions];` + `[base][captions]overlay=0:0:format=auto[out]`;
-    } else {
-      filterComplex += `;[base]copy[out]`;
-    }
-
+    let currentOverlayOut = "[base]";
+    let inputIdx = 1;
     const inputs = ["-i", clipPath];
+
+    // B-Roll overlays have been deprecated in favor of unified split-screen output
+
     if (hasCaptions) {
       inputs.push("-i", captionOverlayPath!);
+      filterComplex +=
+        `;[${inputIdx}:v]fps=30,scale=${w}:${h},colorkey=0x00FF00:0.3:0.1[captions];` +
+        `${currentOverlayOut}[captions]overlay=0:0:format=auto[out]`;
+    } else {
+      filterComplex += `;${currentOverlayOut}copy[out]`;
     }
 
     await runFfmpeg([
@@ -325,5 +340,48 @@ export class VideoProcessor {
     }
 
     return speech;
+  }
+
+  private async resolveBrainrotVideo(jobOptions: ResolvedJobOptions): Promise<string> {
+    const type = jobOptions.output.brainrotType;
+    if (type === "none") return "";
+    
+    let typePath = join(process.cwd(), "assets", "brainrot", type);
+    if (!existsSync(typePath)) {
+      typePath = join(process.cwd(), "assets", "broll", type);
+    }
+
+    if (type === "random") {
+      const types = SUPPORTED_BRAINROT_TYPES.filter(t => t !== "random" && t !== "none");
+      const randomType = types[Math.floor(Math.random() * types.length)];
+      
+      let randomTypePath = join(process.cwd(), "assets", "brainrot", randomType);
+      if (!existsSync(randomTypePath)) {
+        randomTypePath = join(process.cwd(), "assets", "broll", randomType);
+      }
+      return this.getRandomVideoFromDir(randomTypePath);
+    }
+    
+    const specifiedIdx = jobOptions.output.brainrotClipIdx;
+    
+    if (specifiedIdx && specifiedIdx !== "random") {
+      const exactPath = join(typePath, `clip_${specifiedIdx}.mp4`);
+      if (existsSync(exactPath)) return exactPath;
+    }
+    
+    return this.getRandomVideoFromDir(typePath);
+  }
+
+  private async getRandomVideoFromDir(dirPath: string): Promise<string> {
+    if (!existsSync(dirPath)) {
+      throw new Error(`Asset directory not found: ${dirPath}`);
+    }
+    const files = readdirSync(dirPath);
+    const videos = files.filter(f => f.startsWith("clip_") && (f.endsWith(".mp4") || f.endsWith(".webm") || f.endsWith(".mkv")));
+    
+    if (videos.length === 0) {
+      throw new Error(`No videos found in asset directory: ${dirPath}`);
+    }
+    return join(dirPath, videos[Math.floor(Math.random() * videos.length)]);
   }
 }

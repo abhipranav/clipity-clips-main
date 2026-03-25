@@ -1,4 +1,4 @@
-import type { ResolvedJobOptions, AppSettings } from "../job-options/types";
+import type { ResolvedJobOptions } from "../job-options/types";
 
 export interface SettingsStore {
   getDefaults(): Promise<ResolvedJobOptions>;

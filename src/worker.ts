@@ -52,7 +52,7 @@ async function processJob(
   runId: string,
   orchestrator: PipelineOrchestrator,
   providers: Awaited<ReturnType<typeof createProviders>>,
-  maxAttempts: number
+  _maxAttempts: number
 ): Promise<boolean> {
   try {
     await orchestrator.runQueuedRun(runId);

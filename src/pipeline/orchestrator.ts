@@ -410,6 +410,7 @@ export class PipelineOrchestrator {
         this.config,
         reelPath,
         jobOptions,
+        clip,
         artifacts.captionOverlayPath,
       );
       const artifactKey =

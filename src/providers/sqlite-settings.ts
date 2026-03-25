@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 import type { SettingsStore } from "./settings";
-import type { ResolvedJobOptions, AppSettings } from "../job-options/types";
+import type { ResolvedJobOptions } from "../job-options/types";
 import { DEFAULT_RESOLVED_OPTIONS } from "../job-options/types";
 
 interface SettingsRow {

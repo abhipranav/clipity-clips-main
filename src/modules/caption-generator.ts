@@ -159,7 +159,7 @@ export class CaptionGenerator {
       for (const token of segment.tokens) {
         const text = token.text.trim();
         if (!text || text.startsWith("[")) continue;
-        if ((/^[,.\?!;:]$/.test(text) || text.startsWith("'")) && words.length > 0) {
+        if ((/^[,.?!;:]$/.test(text) || text.startsWith("'")) && words.length > 0) {
           words[words.length - 1].word += text;
           words[words.length - 1].end = token.offsets.to / 1000;
         } else {
