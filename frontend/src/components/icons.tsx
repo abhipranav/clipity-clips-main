@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 interface IconProps {
   size?: number;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 export type IconComponent = (props: IconProps) => ReactElement;
@@ -64,8 +65,8 @@ export const Settings = ({ size = 24, className = "" }: IconProps): ReactElement
   </svg>
 );
 
-export const Clapperboard = ({ size = 24, className = "" }: IconProps): ReactElement => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+export const Clapperboard = ({ size = 24, className = "", style }: IconProps): ReactElement => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
     <path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z" />
     <path d="m6.2 5.3 3.1 3.9" />
     <path d="m12.4 3.4 3.1 4" />
@@ -131,8 +132,8 @@ export const Play = ({ size = 24, className = "" }: IconProps): ReactElement => 
   </svg>
 );
 
-export const X = ({ size = 24, className = "" }: IconProps): ReactElement => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+export const X = ({ size = 24, className = "", style }: IconProps): ReactElement => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
     <path d="M18 6 6 18" />
     <path d="m6 6 12 12" />
   </svg>
@@ -184,5 +185,45 @@ export const ChevronDown = ({ size = 24, className = "" }: IconProps): ReactElem
 export const ChevronUp = ({ size = 24, className = "" }: IconProps): ReactElement => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d="m18 15-6-6-6 6" />
+  </svg>
+);
+
+export const Menu = ({ size = 24, className = "", style }: IconProps): ReactElement => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <line x1="4" x2="20" y1="12" y2="12" />
+    <line x1="4" x2="20" y1="6" y2="6" />
+    <line x1="4" x2="20" y1="18" y2="18" />
+  </svg>
+);
+
+export const Pause = ({ size = 24, className = "", style }: IconProps): ReactElement => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <rect x="6" y="4" width="4" height="16" />
+    <rect x="14" y="4" width="4" height="16" />
+  </svg>
+);
+
+export const Volume2 = ({ size = 24, className = "", style }: IconProps): ReactElement => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+    <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+  </svg>
+);
+
+export const VolumeX = ({ size = 24, className = "", style }: IconProps): ReactElement => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+    <line x1="23" y1="9" x2="17" y2="15" />
+    <line x1="17" y1="9" x2="23" y2="15" />
+  </svg>
+);
+
+export const Maximize = ({ size = 24, className = "", style }: IconProps): ReactElement => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+    <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+    <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+    <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
   </svg>
 );

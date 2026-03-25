@@ -2,9 +2,9 @@ import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { api } from "@/api";
-import { buildArtifactUrl } from "@/artifacts";
 import { EmptyState } from "@/components/EmptyState";
-import { Library, Download, ExternalLink, Film } from "@/components/icons";
+import { VideoCard } from "@/components/VideoCard";
+import { Library, Download, Film } from "@/components/icons";
 import type { LibraryGroup } from "@/types";
 import "./LibraryPage.css";
 
@@ -69,60 +69,17 @@ export function LibraryPage(): ReactElement {
                 </div>
               </div>
               <div className="clips-grid">
-                {group.clips.map((clip, clipIndex) => {
-                  const artifactUrl = buildArtifactUrl(clip.finalReelPath);
-
-                  return (
-                    <motion.div
-                      key={clip.clipId}
-                      className="library-clip-card"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: groupIndex * 0.1 + clipIndex * 0.05 }}
-                    >
-                      <div className="clip-preview">
-                        <video
-                          className="clip-video"
-                          src={artifactUrl}
-                          muted
-                          playsInline
-                          preload="metadata"
-                          controls
-                        />
-                        <div className="clip-thumbnail">
-                          <Film size={20} />
-                        </div>
-                      </div>
-                      <div className="clip-info">
-                        <h3 className="clip-title">{clip.title}</h3>
-                        <p className="clip-hook">{clip.hookLine}</p>
-                        <div className="clip-meta">
-                          <span>{formatDuration(clip.duration)}</span>
-                          <span>{formatDate(clip.createdAt)}</span>
-                        </div>
-                      </div>
-                      <div className="clip-actions">
-                        <a
-                          href={artifactUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="clip-action"
-                          title="View"
-                        >
-                          <ExternalLink size={16} />
-                        </a>
-                        <a
-                          href={artifactUrl}
-                          download
-                          className="clip-action"
-                          title="Download"
-                        >
-                          <Download size={16} />
-                        </a>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                {group.clips.map((clip) => (
+                  <VideoCard
+                    key={clip.clipId}
+                    videoPath={clip.finalReelPath}
+                    title={clip.title}
+                    subtitle={clip.hookLine}
+                    duration={clip.duration}
+                    date={clip.createdAt}
+                    aspectRatio="9/16"
+                  />
+                ))}
               </div>
             </motion.div>
           ))}
@@ -143,16 +100,3 @@ function LibrarySkeleton(): ReactElement {
   );
 }
 
-function formatDuration(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-  }).format(date);
-}

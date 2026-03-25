@@ -36,6 +36,10 @@ export type AspectPreset = "9:16" | "1:1" | "16:9";
 
 export type TextCaseMode = "uppercase" | "lowercase" | "title-case" | "as-is";
 
+export type BrainrotType = "none" | "random" | "gta-parkour" | "minecraft-parkour" | "subway-surfers" | "satisfying" | "finance" | "tech" | "nature";
+
+export type BrollMode = "auto" | "none" | "finance" | "tech" | "nature";
+
 export interface CaptionStyleConfig {
   presetId: CaptionPresetId;
   fontId: CaptionFontId;
@@ -59,6 +63,11 @@ export interface OutputOptions {
   aspectPreset: AspectPreset;
   clipSpeed: number;
   splitScreenMode: SplitScreenMode;
+  captionAnimate: boolean;
+  brainrotType: BrainrotType;
+  brainrotClipIdx: number | 'random';
+  brollMode: BrollMode;
+  brollClipIdx: number | 'random';
 }
 
 export interface ClipSelectionOptions {
@@ -229,6 +238,12 @@ export interface Capabilities {
   splitScreenModes: SplitScreenMode[];
   aspectPresets: AspectPreset[];
   textCases: TextCaseMode[];
+  brainrotTypes: BrainrotType[];
+  brollModes: BrollMode[];
+  availableClips: {
+    brainrot: Record<string, number[]>;
+    broll: Record<string, number[]>;
+  };
 }
 
 // New settings format with creator defaults

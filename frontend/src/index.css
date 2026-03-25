@@ -1,47 +1,83 @@
+/* ========================================
+   Clipity Design System
+   Premium Cinematic Editorial UI
+   ======================================== */
+
+/* ========================================
+   LIGHT MODE (Default)
+   ======================================== */
 :root {
-  /* Base colors - warm ivory/bone */
-  --color-bg: #f9f7f4;
+  /* Background Colors - Warm Ivory (freemoney.capital: #F8F7F4) */
+  --color-bg: #F8F7F4;
+  --color-bg-secondary: #F5F4F0;
+  --color-bg-tertiary: #EBE9E4;
+  
+  /* Surface Colors */
   --color-surface: rgba(255, 255, 255, 0.7);
-  --color-surface-solid: #faf8f5;
+  --color-surface-solid: #ffffff;
+  --color-surface-elevated: #ffffff;
   
-  /* Text colors - deep graphite */
-  --color-text-primary: #1a1a1a;
-  --color-text-secondary: #4a4a4a;
-  --color-text-tertiary: #7a7a7a;
-  --color-text-muted: #999999;
+  /* Text Colors - Deep Charcoal with warmth */
+  --color-text-primary: #1C1C1A;
+  --color-text-secondary: #4A4946;
+  --color-text-tertiary: #8A8884;
+  --color-text-muted: #A8A6A1;
   
-  /* Accent 1 - copper/ember orange */
+  /* Accent - Copper/Ember Orange */
   --color-accent: #c4785a;
   --color-accent-light: #e8a88a;
   --color-accent-dark: #a05a3c;
+  --color-accent-gradient: linear-gradient(135deg, #c4785a, #d48a6c);
+  --color-accent-glow: rgba(196, 120, 90, 0.3);
   
-  /* Accent 2 - deep forest green */
+  /* Semantic Colors */
   --color-success: #2d5a3d;
   --color-success-light: #4a7a5a;
+  --color-success-bg: rgba(45, 90, 61, 0.1);
   
-  /* Caution - muted amber */
   --color-caution: #c9a227;
   --color-caution-light: #e8c84a;
+  --color-caution-bg: rgba(201, 162, 39, 0.1);
   
-  /* Error - rich brick red */
   --color-error: #b54242;
   --color-error-light: #d67272;
+  --color-error-bg: rgba(181, 66, 66, 0.1);
   
-  /* Borders */
-  --color-border: rgba(0, 0, 0, 0.08);
-  --color-border-strong: rgba(0, 0, 0, 0.15);
+  --color-running: #c4785a;
+  --color-running-bg: rgba(196, 120, 90, 0.1);
   
-  /* Shadows */
+  /* Borders - softer, more refined */
+  --color-border-subtle: rgba(28, 28, 26, 0.05);
+  --color-border: rgba(28, 28, 26, 0.08);
+  --color-border-strong: rgba(28, 28, 26, 0.12);
+  
+  /* Shadows - Soft and Premium */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.1);
+  --shadow-glow: 0 0 20px rgba(196, 120, 90, 0.3);
+  --shadow-accent: 0 4px 14px rgba(196, 120, 90, 0.35);
   
-  /* Typography */
+  /* Typography - freemoney.capital inspired */
   --font-display: "Fraunces", Georgia, serif;
-  --font-body: "Manrope", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", monospace;
+  --font-body: "Manrope", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", "SF Mono", monospace;
   
-  /* Spacing */
+  /* Spacing Scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  
+  /* Legacy spacing (for backwards compat) */
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
   --space-md: 1rem;
@@ -50,18 +86,33 @@
   --space-2xl: 3rem;
   --space-3xl: 4rem;
   
-  /* Border radius */
+  /* Border Radius */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
   --radius-xl: 24px;
+  --radius-full: 9999px;
   
   /* Transitions */
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 400ms;
+  --duration-slower: 600ms;
+  
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  
   --transition-fast: 150ms ease;
   --transition-base: 250ms ease;
   --transition-slow: 400ms ease;
 }
 
+/* Removed global dark mode per UX premium plan */
+
+/* ========================================
+   BASE STYLES
+   ======================================== */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -72,6 +123,7 @@ html {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
@@ -80,29 +132,40 @@ body {
   color: var(--color-text-primary);
   line-height: 1.6;
   min-height: 100vh;
+  transition: background-color var(--duration-base) var(--ease-out),
+              color var(--duration-base) var(--ease-out);
 }
 
+/* Typography */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
   font-weight: 700;
   line-height: 1.2;
   color: var(--color-text-primary);
+  transition: color var(--duration-base) var(--ease-out);
 }
 
 h1 {
-  font-size: 2.5rem;
+  font-size: 2.25rem;
+  letter-spacing: -0.01em;
 }
 
 h2 {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
 }
 
 h3 {
   font-size: 1.25rem;
 }
 
+h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
 p {
   color: var(--color-text-secondary);
+  transition: color var(--duration-base) var(--ease-out);
 }
 
 code, pre {
@@ -112,7 +175,7 @@ code, pre {
 a {
   color: var(--color-accent);
   text-decoration: none;
-  transition: color var(--transition-fast);
+  transition: color var(--duration-fast) ease;
 }
 
 a:hover {
@@ -130,13 +193,114 @@ input, textarea, select {
   font-family: var(--font-body);
 }
 
-/* Status colors */
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+/* Glassmorphism */
+.glass {
+  background: var(--color-surface);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--color-border);
+}
+
+.glass-strong {
+  background: var(--color-surface);
+  backdrop-filter: blur(30px) saturate(200%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  border: 1px solid var(--color-border-strong);
+}
+
+/* Surface Cards */
+.surface {
+  background: var(--color-surface-solid);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.surface-elevated {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+/* Status Pills */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pill-queued {
+  background: var(--color-caution-bg);
+  color: var(--color-caution);
+}
+
+.pill-running {
+  background: var(--color-running-bg);
+  color: var(--color-running);
+}
+
+.pill-completed {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.pill-failed {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+/* Premium Button Styles */
+.btn-primary {
+  background: var(--color-accent-gradient);
+  color: white;
+  font-weight: 600;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-accent);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px var(--color-accent-glow);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: var(--color-surface-solid);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.btn-secondary:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-strong);
+}
+
+/* Status Colors (Legacy Support) */
 .status-queued {
   color: var(--color-caution);
 }
 
 .status-running {
-  color: var(--color-accent);
+  color: var(--color-running);
 }
 
 .status-completed {
@@ -147,7 +311,7 @@ input, textarea, select {
   color: var(--color-error);
 }
 
-/* Shimmer animation for loading states */
+/* Shimmer Animation */
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -161,14 +325,73 @@ input, textarea, select {
   background: linear-gradient(
     90deg,
     var(--color-surface-solid) 25%,
-    var(--color-bg) 50%,
+    var(--color-bg-secondary) 50%,
     var(--color-surface-solid) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
 
-/* Reduced motion */
+/* Skeleton */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-tertiary) 25%,
+    var(--color-bg-secondary) 50%,
+    var(--color-bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* Focus States */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-accent-glow);
+}
+
+/* Hover Lift Effect */
+.hover-lift {
+  transition: transform var(--duration-base) var(--ease-out),
+              box-shadow var(--duration-base) var(--ease-out);
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Text Gradients */
+.text-gradient {
+  background: var(--color-accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Overline Text */
+.overline {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-tertiary);
+}
+
+/* ========================================
+   THEME TRANSITIONS
+   ======================================== */
+.theme-transition {
+  transition: background-color var(--duration-slow) var(--ease-out),
+              color var(--duration-slow) var(--ease-out),
+              border-color var(--duration-slow) var(--ease-out),
+              box-shadow var(--duration-slow) var(--ease-out);
+}
+
+/* ========================================
+   REDUCED MOTION
+   ======================================== */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -176,5 +399,55 @@ input, textarea, select {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
+  
+  .shimmer,
+  .skeleton {
+    animation: none;
+    background: var(--color-bg-tertiary);
+  }
+}
+
+/* ========================================
+   SCROLLBAR STYLING
+   ======================================== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-text-muted);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+}
+
+/* ========================================
+   SELECTION
+   ======================================== */
+::selection {
+  background: var(--color-accent);
+  color: white;
+}
+
+/* ========================================
+   FOCUS VISIBLE
+   ======================================== */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Remove focus for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
 }

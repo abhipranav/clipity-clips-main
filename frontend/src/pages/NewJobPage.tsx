@@ -199,20 +199,116 @@ export function NewJobPage(): ReactElement {
                       />
                     </div>
 
-                    {/* Split Screen */}
+                    {/* Background Video (Split-Screen) */}
                     <div className="advanced-group">
-                      <label>Split Screen Mode</label>
-                      <select
-                        value={jobOptions.output?.splitScreenMode ?? defaults.output.splitScreenMode}
-                        onChange={(e) => setJobOptions({
-                          ...jobOptions,
-                          output: { ...jobOptions.output, splitScreenMode: e.target.value as any }
+                      <label>Background Video (Split Screen)</label>
+                      <div className="asset-grid">
+                        <div 
+                          className={`asset-card ${(jobOptions.output?.brainrotType ?? defaults.output.brainrotType) === 'none' ? 'active' : ''}`}
+                          onClick={() => setJobOptions({
+                            ...jobOptions,
+                            output: { ...jobOptions.output, brainrotType: 'none', splitScreenMode: 'never', brollMode: 'none' }
+                          })}
+                          style={{ minHeight: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <div className="asset-label" style={{ top: 0, position: 'relative', background: 'none', padding: 10, color: 'var(--color-text-primary)' }}>
+                            None / Gameplay Only
+                          </div>
+                          {((jobOptions.output?.brainrotType ?? defaults.output.brainrotType) === 'none') && <div className="asset-check"><CheckCircle size={12} /></div>}
+                        </div>
+
+                        {(settings?.capabilities.brainrotTypes ?? []).filter(t => t !== "none").map((t) => {
+                          const isActive = (jobOptions.output?.brainrotType ?? defaults.output.brainrotType) === t;
+                          const isSpecial = t === "random";
+                          const isBroll = ['finance', 'tech', 'nature'].includes(t);
+                          const thumbPath = `/assets/${isBroll ? 'broll' : 'brainrot'}/${t}/thumbnail.jpg`;
+                          
+                          return (
+                            <div 
+                              key={t} 
+                              className={`asset-card ${isActive ? 'active' : ''}`}
+                              onClick={() => setJobOptions({
+                                ...jobOptions,
+                                output: { 
+                                  ...jobOptions.output, 
+                                  brainrotType: t as any,
+                                  splitScreenMode: 'always',
+                                  brollMode: 'none',
+                                  brainrotClipIdx: 'random'
+                                }
+                              })}
+                              style={isSpecial ? { minHeight: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' } : undefined}
+                            >
+                              {isSpecial ? (
+                                <div className="asset-label" style={{ position: 'relative', background: 'none', padding: 10, color: 'var(--color-text-primary)' }}>
+                                  Random Mix
+                                </div>
+                              ) : (
+                                <>
+                                  <img 
+                                    src={thumbPath} 
+                                    alt={t} 
+                                    className="asset-thumb"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                  <div className="asset-label">{t.replace(/-/g, " ")}</div>
+                                </>
+                              )}
+                              {isActive && <div className="asset-check"><CheckCircle size={12} /></div>}
+                            </div>
+                          );
                         })}
-                      >
-                        {settings?.capabilities.splitScreenModes.map((s) => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
+                      </div>
+
+                      {/* Sub-Clip Selection */}
+                      {((jobOptions.output?.brainrotType ?? defaults.output.brainrotType) !== "random" && (jobOptions.output?.brainrotType ?? defaults.output.brainrotType) !== "none") && (
+                        <div style={{ marginTop: 'var(--space-md)' }}>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--color-text-tertiary)' }}>Select Specific Variation</label>
+                          <div className="asset-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))' }}>
+                            {/* Random Option */}
+                            <div 
+                              className={`asset-card ${(jobOptions.output?.brainrotClipIdx ?? defaults.output.brainrotClipIdx) === 'random' ? 'active' : ''}`}
+                              onClick={() => setJobOptions({
+                                ...jobOptions,
+                                output: { ...jobOptions.output, brainrotClipIdx: 'random' }
+                              })}
+                              style={{ height: '60px', aspectRatio: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                              <div className="asset-label" style={{ position: 'relative', background: 'none', padding: 0, color: 'var(--color-text-primary)' }}>
+                                Random
+                              </div>
+                              {(jobOptions.output?.brainrotClipIdx ?? defaults.output.brainrotClipIdx) === 'random' && <div className="asset-check"><CheckCircle size={12} /></div>}
+                            </div>
+                            
+                            {/* Specific Clips */}
+                            {((['finance', 'tech', 'nature'].includes(jobOptions.output?.brainrotType ?? defaults.output.brainrotType) ? settings?.capabilities.availableClips?.broll : settings?.capabilities.availableClips?.brainrot)?.[jobOptions.output?.brainrotType ?? defaults.output.brainrotType] ?? []).map((idx) => {
+                              const isActive = (jobOptions.output?.brainrotClipIdx ?? defaults.output.brainrotClipIdx) === idx;
+                              const currentCategory = jobOptions.output?.brainrotType ?? defaults.output.brainrotType;
+                              const isBroll = ['finance', 'tech', 'nature'].includes(currentCategory);
+                              const subThumbPath = `/assets/${isBroll ? 'broll' : 'brainrot'}/${currentCategory}/thumb_${idx}.jpg`;
+                              return (
+                                <div 
+                                  key={idx} 
+                                  className={`asset-card ${isActive ? 'active' : ''}`}
+                                  onClick={() => setJobOptions({
+                                    ...jobOptions,
+                                    output: { ...jobOptions.output, brainrotClipIdx: idx as any }
+                                  })}
+                                >
+                                  <img 
+                                    src={subThumbPath} 
+                                    alt={`Clip ${idx}`} 
+                                    className="asset-thumb"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                  <div className="asset-label">Variation {idx}</div>
+                                  {isActive && <div className="asset-check"><CheckCircle size={12} /></div>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Max Clips */}
@@ -233,17 +329,36 @@ export function NewJobPage(): ReactElement {
                     {/* Font */}
                     <div className="advanced-group">
                       <label>Caption Font</label>
-                      <select
-                        value={jobOptions.captions?.fontId ?? defaults.captions.fontId}
-                        onChange={(e) => setJobOptions({
-                          ...jobOptions,
-                          captions: { ...jobOptions.captions, fontId: e.target.value as any }
+                      <div className="asset-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))' }}>
+                        {settings?.capabilities.fonts.map((f) => {
+                          const isActive = (jobOptions.captions?.fontId ?? defaults.captions.fontId) === f;
+                          const getFontFamily = (id: string) => {
+                            if (id === 'montserrat') return "'Montserrat', sans-serif";
+                            if (id === 'anton') return "'Anton', sans-serif";
+                            if (id === 'bangers') return "'Bangers', cursive";
+                            if (id === 'oswald') return "'Oswald', sans-serif";
+                            if (id === 'roboto-mono') return "'Roboto Mono', monospace";
+                            return "sans-serif";
+                          };
+
+                          return (
+                            <div 
+                              key={f} 
+                              className={`asset-card ${isActive ? 'active' : ''}`}
+                              onClick={() => setJobOptions({
+                                ...jobOptions,
+                                captions: { ...jobOptions.captions, fontId: f as any }
+                              })}
+                              style={{ height: '60px', aspectRatio: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                              <span style={{ fontFamily: getFontFamily(f), fontSize: '1.2rem', color: isActive ? 'var(--color-primary)' : 'var(--color-text-primary)' }}>
+                                {f.replace(/-/g, " ")}
+                              </span>
+                              {isActive && <div className="asset-check"><CheckCircle size={12} /></div>}
+                            </div>
+                          );
                         })}
-                      >
-                        {settings?.capabilities.fonts.map((f) => (
-                          <option key={f} value={f}>{f}</option>
-                        ))}
-                      </select>
+                      </div>
                     </div>
 
                     {/* Text Case */}
