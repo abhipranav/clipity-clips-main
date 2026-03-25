@@ -4,6 +4,7 @@ export type AppMode = "local" | "cloud";
 export type CheckpointBackend = "sqlite" | "postgres";
 export type QueueBackend = "sqlite" | "sqs";
 export type ArtifactBackend = "local" | "s3";
+export type UserTier = "free" | "pro";
 
 const configSchema = z.object({
   // Core settings
@@ -47,7 +48,8 @@ const configSchema = z.object({
       data: z.string().default("./data"),
       output: z.string().default("./output"),
       assets: z.string().default("./assets"),
-      subwaySurfers: z.string().default("./assets/subway-surfers"),
+      brainrotAssets: z.string().default("./assets/brainrot"),
+      brollAssets: z.string().default("./assets/broll"),
       checkpointDb: z.string().default("./data/checkpoints.db"),
     })
     .default({}),
@@ -55,6 +57,10 @@ const configSchema = z.object({
   // Web server settings
   port: z.coerce.number().int().default(3000),
   appUrl: z.string().default("http://localhost:3000"),
+
+  // Auth settings
+  jwtSecret: z.string().optional(),
+  defaultUserTier: z.enum(["free", "pro"]).default("free"),
 });
 
 export type Config = z.infer<typeof configSchema>;
@@ -94,6 +100,9 @@ export function loadConfig(): Config {
     paths: {},
     port: Bun.env.PORT,
     appUrl: Bun.env.APP_URL,
+
+    jwtSecret: Bun.env.JWT_SECRET,
+    defaultUserTier: Bun.env.DEFAULT_USER_TIER,
   };
 
   const config = configSchema.parse(rawConfig);

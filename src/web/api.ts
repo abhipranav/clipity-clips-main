@@ -1,12 +1,10 @@
 import { mkdtemp, readdir, rm } from "fs/promises";
+import { existsSync, readdirSync } from "fs";
 import { tmpdir } from "os";
 import { basename, join, resolve } from "path";
 import type { ProviderSet } from "../providers/factory";
 import { loadConfig } from "../config";
-import type { PipelineRun, StageResult, ClipProgressSnapshot } from "../pipeline/types";
-import type { CheckpointStore } from "../providers/checkpoint";
-import type { QueueProvider } from "../providers/queue";
-import type { SettingsStore } from "../providers/settings";
+import type { PipelineRun } from "../pipeline/types";
 import { createLogger } from "../utils/logger";
 import type { JobOptions, ResolvedJobOptions } from "../job-options/types";
 import {
@@ -25,6 +23,10 @@ import {
   isValidSplitScreenMode,
   isValidAspectPreset,
   isValidTextCase,
+  SUPPORTED_BRAINROT_TYPES,
+  SUPPORTED_BROLL_MODES,
+  isValidBrainrotType,
+  isValidBrollMode,
 } from "../job-options/types";
 
 const log = createLogger("api");
@@ -478,6 +480,29 @@ export async function getQueue(): Promise<Response> {
   }
 }
 
+function getAvailableClips(baseType: string, categories: readonly string[]): Record<string, number[]> {
+  const result: Record<string, number[]> = {};
+  for (const category of categories) {
+    if (category === "random" || category === "auto" || category === "none") continue;
+    try {
+      const dirPath = join(process.cwd(), "assets", baseType, category);
+      if (existsSync(dirPath)) {
+        const files = readdirSync(dirPath);
+        const thumbs = files.filter(f => f.startsWith("thumb_") && f.endsWith(".jpg")).map(f => {
+          const match = f.match(/thumb_(\d+)\.jpg/);
+          return match ? parseInt(match[1]) : 0;
+        }).filter(n => n > 0).sort((a, b) => a - b);
+        if (thumbs.length > 0) {
+          result[category] = thumbs;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return result;
+}
+
 // GET /api/settings
 export async function getSettings(): Promise<Response> {
   try {
@@ -496,6 +521,12 @@ export async function getSettings(): Promise<Response> {
         splitScreenModes: SUPPORTED_SPLIT_SCREEN_MODES,
         aspectPresets: SUPPORTED_ASPECT_PRESETS,
         textCases: SUPPORTED_TEXT_CASES,
+        brainrotTypes: SUPPORTED_BRAINROT_TYPES,
+        brollModes: SUPPORTED_BROLL_MODES,
+        availableClips: {
+          brainrot: getAvailableClips("brainrot", SUPPORTED_BRAINROT_TYPES),
+          broll: getAvailableClips("broll", SUPPORTED_BROLL_MODES),
+        },
       },
       validation: VALIDATION,
       environment: {
@@ -664,6 +695,12 @@ function validateJobOptions(options: JobOptions): string | null {
     }
     if (o.splitScreenMode !== undefined && !isValidSplitScreenMode(o.splitScreenMode)) {
       return `Invalid split screen mode: ${o.splitScreenMode}`;
+    }
+    if (o.brainrotType !== undefined && !isValidBrainrotType(o.brainrotType)) {
+      return `Invalid brainrot type: ${o.brainrotType}`;
+    }
+    if (o.brollMode !== undefined && !isValidBrollMode(o.brollMode)) {
+      return `Invalid broll mode: ${o.brollMode}`;
     }
     if (o.clipSpeed !== undefined && (o.clipSpeed < VALIDATION.clipSpeed.min || o.clipSpeed > VALIDATION.clipSpeed.max)) {
       return `Invalid clipSpeed: ${o.clipSpeed}. Must be between ${VALIDATION.clipSpeed.min} and ${VALIDATION.clipSpeed.max}`;

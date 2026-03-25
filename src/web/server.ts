@@ -1,8 +1,10 @@
-import { basename, isAbsolute, resolve, join } from "path";
+import { basename, join } from "path";
 import { loadConfig } from "../config";
 import { createProviders } from "../providers/factory";
 import { createLogger } from "../utils/logger";
 import * as api from "./api";
+import { AuthService } from "../auth/service";
+import { createAuthRoutes } from "../auth/routes";
 
 const log = createLogger("web-server");
 
@@ -13,46 +15,9 @@ const port = config.port;
 const providers = await createProviders(config);
 api.setProviders(providers);
 
-function listArtifactFiles(artifactPath: string): string | null {
-  const resolvedBase = resolve(process.cwd());
-  const decoded = decodeURIComponent(artifactPath);
-  const resolved = resolve(decoded);
-
-  if (!isAbsolute(decoded)) {
-    return null;
-  }
-
-  if (!resolved.startsWith(resolvedBase)) {
-    return null;
-  }
-
-  return resolved;
-}
-
-async function handleCreateJob(request: Request): Promise<Response> {
-  const formData = await request.formData();
-  const videoUrlValue = formData.get("videoUrl");
-  const videoUrl = typeof videoUrlValue === "string" ? videoUrlValue.trim() : "";
-
-  if (!videoUrl) {
-    return new Response("Missing videoUrl", { status: 400 });
-  }
-
-  // Extract video ID for the run title
-  const videoIdMatch = videoUrl.match(/(?:v=|\/shorts\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  const videoId = videoIdMatch?.[1] ?? "";
-
-  // Create a queued run and enqueue it
-  const run = await providers.checkpoint.createQueuedRun(videoUrl, videoId, "");
-  await providers.queue.enqueue(run.id);
-
-  log.info(`Created queued run: ${run.id} for ${videoUrl}`);
-
-  return new Response(null, {
-    status: 303,
-    headers: { location: "/" },
-  });
-}
+// Initialize auth components
+const authService = new AuthService(config, providers.userStore);
+const authRoutes = createAuthRoutes(authService, providers.userStore);
 
 async function serveArtifact(pathname: string): Promise<Response> {
   const artifactRef = decodeURIComponent(pathname.replace("/artifacts/", ""));
@@ -170,7 +135,25 @@ const server = Bun.serve({
       const cors = corsHeaders();
       let response: Response;
       
-      if (pathname === "/api/app-summary" && request.method === "GET") {
+      // Auth routes
+      if (pathname === "/api/auth/signup" && request.method === "POST") {
+        response = await authRoutes.signup(request);
+      } else if (pathname === "/api/auth/login" && request.method === "POST") {
+        response = await authRoutes.login(request);
+      } else if (pathname === "/api/auth/logout" && request.method === "POST") {
+        response = await authRoutes.logout(request);
+      } else if (pathname === "/api/auth/me" && request.method === "GET") {
+        response = await authRoutes.me(request);
+      } else if (pathname === "/api/auth/refresh" && request.method === "POST") {
+        response = await authRoutes.refresh(request);
+      } else if (pathname === "/api/auth/api-keys" && request.method === "GET") {
+        response = await authRoutes.listApiKeys(request);
+      } else if (pathname === "/api/auth/api-keys" && request.method === "POST") {
+        response = await authRoutes.createApiKey(request);
+      } else if (pathname.startsWith("/api/auth/api-keys/") && request.method === "DELETE") {
+        const keyId = pathname.replace("/api/auth/api-keys/", "");
+        response = await authRoutes.revokeApiKey(request, keyId);
+      } else if (pathname === "/api/app-summary" && request.method === "GET") {
         response = await api.getAppSummary();
       } else if (pathname === "/api/jobs" && request.method === "POST") {
         response = await api.createJob(request);
@@ -213,6 +196,31 @@ const server = Bun.serve({
       return await serveArtifact(pathname);
     }
 
+    // Asset serving (thumbnails, preview videos)
+    if (pathname.startsWith("/assets/")) {
+      const assetPath = pathname.replace("/assets/", "");
+      // Security check
+      if (assetPath.includes("..") || assetPath.startsWith("/")) {
+        return new Response("Not found", { status: 404 });
+      }
+      const fullPath = join(process.cwd(), "assets", assetPath);
+      try {
+        const file = Bun.file(fullPath);
+        if (await file.exists()) {
+          const ext = assetPath.split(".").pop()?.toLowerCase();
+          return new Response(file, {
+            headers: {
+              "content-type": getContentType(ext),
+              "cache-control": "public, max-age=86400",
+            },
+          });
+        }
+      } catch (err) {
+        log.error(`Failed to serve asset: ${err}`);
+      }
+      return new Response("Not found", { status: 404 });
+    }
+
     // Legacy form endpoint for backwards compatibility
     if (pathname === "/jobs" && request.method === "POST") {
       const formData = await request.formData();
@@ -250,5 +258,6 @@ process.on("SIGINT", async () => {
   await providers.checkpoint.close();
   await providers.queue.close();
   await providers.settings.close();
+  await providers.userStore.close();
   process.exit(0);
 });
