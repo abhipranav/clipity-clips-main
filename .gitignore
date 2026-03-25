@@ -16,3 +16,4 @@ firebase-debug.log
 *.log
 .DS_Store
 .codex/
+assets/
