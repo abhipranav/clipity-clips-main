@@ -303,6 +303,7 @@ export class PipelineOrchestrator {
         metadata.filePath,
         clip,
         join(dir, "clips"),
+        this.config,
       );
       await this.checkpoint.updateClipProgress(
         runId,

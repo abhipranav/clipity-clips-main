@@ -110,10 +110,13 @@ export async function detectSilence(
   filePath: string,
   thresholdDb: number,
   minDuration: number,
+  threads?: number,
 ): Promise<SilenceRange[]> {
+  const threadArgs = threads && threads > 0 ? ["-threads", String(threads)] : [];
   const proc = Bun.spawn(
     [
       getFfmpegBin(),
+      ...threadArgs,
       "-i",
       filePath,
       "-af",

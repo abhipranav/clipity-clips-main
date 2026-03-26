@@ -19,6 +19,21 @@ const configSchema = z.object({
   maxClips: z.coerce.number().int().min(0).default(0),
   preferYouTubeTranscripts: z.coerce.boolean().default(true),
   captionAnimate: z.coerce.boolean().default(true),
+  ffmpegThreads: z.coerce.number().int().min(0).max(32).optional(),
+  ffmpegPreset: z
+    .enum([
+      "ultrafast",
+      "superfast",
+      "veryfast",
+      "faster",
+      "fast",
+      "medium",
+      "slow",
+      "slower",
+      "veryslow",
+    ])
+    .optional(),
+  ffmpegCrf: z.coerce.number().int().min(16).max(36).optional(),
 
   // Mode and provider settings
   appMode: z.enum(["local", "cloud"]).default("local"),
@@ -82,6 +97,9 @@ export function loadConfig(): Config {
     maxClips: Bun.env.MAX_CLIPS,
     preferYouTubeTranscripts: Bun.env.PREFER_YOUTUBE_TRANSCRIPTS,
     captionAnimate: Bun.env.CAPTION_ANIMATE,
+    ffmpegThreads: Bun.env.FFMPEG_THREADS,
+    ffmpegPreset: Bun.env.FFMPEG_PRESET,
+    ffmpegCrf: Bun.env.FFMPEG_CRF,
 
     appMode: Bun.env.APP_MODE,
     checkpointBackend: Bun.env.CHECKPOINT_BACKEND,
@@ -124,6 +142,9 @@ export function loadConfig(): Config {
     workerTempDir: config.workerTempDir ?? (config.appMode === "cloud" ? "/tmp/clipity" : "./data/worker-tmp"),
     // Local mode defaults to browser cookies if not explicitly set
     ytdlpUseBrowserCookies: config.ytdlpUseBrowserCookies ?? (config.appMode === "local"),
+    ffmpegThreads: config.ffmpegThreads ?? (config.appMode === "local" ? 2 : 0),
+    ffmpegPreset: config.ffmpegPreset ?? (config.appMode === "local" ? "veryfast" : "fast"),
+    ffmpegCrf: config.ffmpegCrf ?? (config.appMode === "local" ? 23 : 20),
   };
 
   return finalConfig;

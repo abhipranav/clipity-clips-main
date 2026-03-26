@@ -21,7 +21,21 @@ export interface SpeechRange {
 }
 
 export class VideoProcessor {
-  async extractClip(videoPath: string, clip: ClipCandidate, outputDir: string): Promise<string> {
+  private buildEncodeArgs(config?: Config): string[] {
+    const threads = config?.ffmpegThreads;
+    const preset = config?.ffmpegPreset ?? "medium";
+    const crf = config?.ffmpegCrf ?? 18;
+    const threadArgs = threads && threads > 0 ? ["-threads", String(threads)] : [];
+
+    return [...threadArgs, "-c:v", "libx264", "-preset", preset, "-crf", String(crf)];
+  }
+
+  async extractClip(
+    videoPath: string,
+    clip: ClipCandidate,
+    outputDir: string,
+    config?: Config,
+  ): Promise<string> {
     const outputPath = join(outputDir, `${clip.id}_raw.mp4`);
 
     if (await fileExists(outputPath)) {
@@ -37,12 +51,7 @@ export class VideoProcessor {
       secondsToFfmpegTimestamp(clip.startTime),
       "-to",
       secondsToFfmpegTimestamp(clip.endTime),
-      "-c:v",
-      "libx264",
-      "-preset",
-      "fast",
-      "-crf",
-      "18",
+      ...this.buildEncodeArgs(config),
       "-c:a",
       "aac",
       "-b:a",
@@ -69,6 +78,7 @@ export class VideoProcessor {
       clipPath,
       config.silenceThresholdDb,
       config.silenceMinDuration,
+      config.ffmpegThreads,
     );
 
     if (silenceRanges.length === 0) {
@@ -123,12 +133,7 @@ export class VideoProcessor {
       "[outv]",
       "-map",
       "[outa]",
-      "-c:v",
-      "libx264",
-      "-preset",
-      "fast",
-      "-crf",
-      "18",
+      ...this.buildEncodeArgs(config),
       "-c:a",
       "aac",
       "-b:a",
@@ -237,12 +242,7 @@ export class VideoProcessor {
       "[out]",
       "-map",
       "[afast]",
-      "-c:v",
-      "libx264",
-      "-preset",
-      "medium",
-      "-crf",
-      "18",
+      ...this.buildEncodeArgs(config),
       "-c:a",
       "aac",
       "-b:a",
@@ -298,12 +298,7 @@ export class VideoProcessor {
       "[out]",
       "-map",
       "[afast]",
-      "-c:v",
-      "libx264",
-      "-preset",
-      "medium",
-      "-crf",
-      "18",
+      ...this.buildEncodeArgs(config),
       "-c:a",
       "aac",
       "-b:a",
