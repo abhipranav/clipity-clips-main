@@ -71,10 +71,18 @@ MAX_PARALLEL_CLIPS=3        # 1-10
 WORKER_CONCURRENCY=1
 WORKER_POLL_INTERVAL_MS=2000
 WHISPER_CACHE_DIR=/opt/clipity/models/whisper
+YTDLP_RETRY_ATTEMPTS=6
+YTDLP_RETRY_BASE_DELAY_MS=1500
+YTDLP_USE_IPV4=true
+# Strongly recommended on EC2 when YouTube bot checks appear:
+# comma-separated rotating proxies (residential/mobile generally more reliable)
+# YTDLP_PROXY_URLS=http://user:pass@proxy1:8080,http://user:pass@proxy2:8080
 OUTPUT_WIDTH=1080
 OUTPUT_HEIGHT=1920
 PORT=3000
 ```
+
+If yt-dlp shows "Sign in to confirm you're not a bot" or "Precondition check failed", this app now automatically retries with multiple YouTube player client profiles and backoff. If all attempts still fail, configure `YTDLP_PROXY_URLS` to enable automatic per-attempt proxy rotation without needing frequent cookies refresh.
 
 ---
 
@@ -118,6 +126,15 @@ sudo systemctl start clipity-worker
 # Check status
 sudo systemctl status clipity-web
 sudo systemctl status clipity-worker
+```
+
+When updating to the latest downloader resilience logic, run:
+```bash
+cd /opt/clipity
+bun install --frozen-lockfile
+bun run build
+sudo systemctl restart clipity-worker
+sudo systemctl restart clipity-web
 ```
 
 Recommended order:
@@ -301,6 +318,26 @@ whisper-cli -h
 # Test preflight checks
 cd /opt/clipity && bun run src/worker.ts
 ```
+
+### YouTube bot-check failures on EC2
+Symptoms in logs:
+- `Precondition check failed`
+- `Sign in to confirm you're not a bot`
+
+Actions:
+```bash
+# verify latest yt-dlp binary
+yt-dlp --version
+
+# force update immediately (setup script also installs a 4-hour cron update)
+sudo /usr/local/bin/clipity-update-ytdlp
+
+# restart worker after env or yt-dlp updates
+sudo systemctl restart clipity-worker
+sudo journalctl -u clipity-worker -f
+```
+
+If failures persist, set `YTDLP_PROXY_URLS` in `/opt/clipity/.env` and restart `clipity-worker`.
 
 ### Out of disk space
 ```bash

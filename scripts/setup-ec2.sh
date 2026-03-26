@@ -17,6 +17,7 @@ apt-get install -y \
     git \
     unzip \
     zip \
+    cron \
     ffmpeg \
     python3 \
     python3-pip \
@@ -36,6 +37,27 @@ fi
 echo "Installing yt-dlp..."
 curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
 chmod +x /usr/local/bin/yt-dlp
+
+# Install automatic yt-dlp updater (helps when YouTube changes signatures/challenges)
+cat > /usr/local/bin/clipity-update-ytdlp << 'EOF'
+#!/bin/bash
+set -euo pipefail
+
+tmp_file=$(mktemp)
+trap 'rm -f "$tmp_file"' EXIT
+
+curl -fsSL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o "$tmp_file"
+install -m 0755 "$tmp_file" /usr/local/bin/yt-dlp
+EOF
+chmod +x /usr/local/bin/clipity-update-ytdlp
+
+cat > /etc/cron.d/clipity-ytdlp-update << 'EOF'
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+0 */4 * * * root /usr/local/bin/clipity-update-ytdlp >> /var/log/clipity-ytdlp-update.log 2>&1
+EOF
+systemctl enable cron
+systemctl restart cron
 
 # Install Python transcription dependencies used by the app
 echo "Installing Python transcription dependencies..."
@@ -84,6 +106,11 @@ OUTPUT_HEIGHT=1920
 WORKER_CONCURRENCY=1
 WORKER_POLL_INTERVAL_MS=2000
 WHISPER_CACHE_DIR=/opt/clipity/models/whisper
+YTDLP_RETRY_ATTEMPTS=6
+YTDLP_RETRY_BASE_DELAY_MS=1500
+YTDLP_USE_IPV4=true
+# Optional comma-separated HTTP/HTTPS proxies used as automatic fallback rotation
+# YTDLP_PROXY_URLS=http://user:pass@proxy1:8080,http://user:pass@proxy2:8080
 
 # Web server
 PORT=3000
@@ -95,6 +122,7 @@ EOF
 
 echo ""
 echo "=== Setup Complete ==="
+echo "yt-dlp auto-updates every 4 hours via /etc/cron.d/clipity-ytdlp-update"
 echo "Next steps:"
 echo "1. Edit /opt/clipity/.env and add your GEMINI_API_KEY"
 echo "2. Copy your application code to /opt/clipity/"

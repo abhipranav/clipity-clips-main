@@ -41,6 +41,10 @@ const configSchema = z.object({
   ytdlpUseBrowserCookies: z.coerce.boolean().optional(),
   ytdlpBrowser: z.string().default("chrome"),
   ytdlpCookiesFile: z.string().optional(),
+  ytdlpRetryAttempts: z.coerce.number().int().min(1).max(12).default(6),
+  ytdlpRetryBaseDelayMs: z.coerce.number().int().min(100).max(60000).default(1500),
+  ytdlpUseIpv4: z.coerce.boolean().default(true),
+  ytdlpProxyUrls: z.string().optional(),
 
   // Paths
   paths: z
@@ -96,6 +100,10 @@ export function loadConfig(): Config {
     ytdlpUseBrowserCookies: Bun.env.YTDLP_USE_BROWSER_COOKIES,
     ytdlpBrowser: Bun.env.YTDLP_BROWSER,
     ytdlpCookiesFile: Bun.env.YTDLP_COOKIES_FILE,
+    ytdlpRetryAttempts: Bun.env.YTDLP_RETRY_ATTEMPTS,
+    ytdlpRetryBaseDelayMs: Bun.env.YTDLP_RETRY_BASE_DELAY_MS,
+    ytdlpUseIpv4: Bun.env.YTDLP_USE_IPV4,
+    ytdlpProxyUrls: Bun.env.YTDLP_PROXY_URLS,
 
     paths: {},
     port: Bun.env.PORT,

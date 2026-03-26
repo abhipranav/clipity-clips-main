@@ -80,6 +80,10 @@ Environment variables (all optional with defaults):
 | `SILENCE_THRESHOLD_DB` | `-35` | Silence detection threshold |
 | `OUTPUT_WIDTH` | `1080` | Output video width |
 | `OUTPUT_HEIGHT` | `1920` | Output video height |
+| `YTDLP_RETRY_ATTEMPTS` | `6` | Total yt-dlp attempts across fallback client profiles |
+| `YTDLP_RETRY_BASE_DELAY_MS` | `1500` | Linear backoff base delay between attempts |
+| `YTDLP_USE_IPV4` | `true` | Force IPv4 for yt-dlp requests (helps on some EC2 networks) |
+| `YTDLP_PROXY_URLS` | (empty) | Optional comma-separated proxy URLs for automatic rotation |
 
 ## Testing
 

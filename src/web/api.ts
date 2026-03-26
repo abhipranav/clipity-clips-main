@@ -56,6 +56,24 @@ async function checkBinary(name: string, args: string[] = ["--version"]): Promis
   }
 }
 
+async function getBinaryVersion(name: string, args: string[] = ["--version"]): Promise<string | null> {
+  try {
+    const proc = Bun.spawn([name, ...args], { stdout: "pipe", stderr: "pipe" });
+    const stdout = await new Response(proc.stdout).text();
+    const stderr = await new Response(proc.stderr).text();
+    const exitCode = await proc.exited;
+    if (exitCode !== 0) {
+      return null;
+    }
+
+    const combined = `${stdout}\n${stderr}`.trim();
+    const firstLine = combined.split("\n").map((line) => line.trim()).find((line) => line.length > 0);
+    return firstLine ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function hasRecentWorkerActivity(runs: PipelineRun[]): boolean {
   const cutoff = Date.now() - workerHeartbeatWindowMs;
   return runs.some((run) => {
@@ -593,6 +611,7 @@ export async function getSystemHealth(): Promise<Response> {
     // Check Gemini API
     const geminiHealthy = !!config.geminiApiKey;
     const dependencyHealth = await getDependencyHealth();
+    const ytDlpVersion = await getBinaryVersion("yt-dlp", ["--version"]);
     const dependenciesHealthy = Object.values(dependencyHealth).every(Boolean);
     const workerHealthy = queueHealthy && (runs.filter((run) => run.status === "queued").length === 0 || hasRecentWorkerActivity(runs));
 
@@ -612,6 +631,14 @@ export async function getSystemHealth(): Promise<Response> {
         zip: dependencyHealth.zip,
         whisperCli: dependencyHealth.whisperCli,
       },
+      downloader: {
+        ytDlpVersion,
+        retryAttempts: config.ytdlpRetryAttempts,
+        retryBaseDelayMs: config.ytdlpRetryBaseDelayMs,
+        useIpv4: config.ytdlpUseIpv4,
+        proxyConfigured: Boolean(config.ytdlpProxyUrls?.trim()),
+        useBrowserCookies: config.ytdlpUseBrowserCookies,
+      },
       message: allHealthy ? undefined : "Some services are experiencing issues",
     });
   } catch (err) {
@@ -629,6 +656,14 @@ export async function getSystemHealth(): Promise<Response> {
         python3: false,
         zip: false,
         whisperCli: false,
+      },
+      downloader: {
+        ytDlpVersion: null,
+        retryAttempts: null,
+        retryBaseDelayMs: null,
+        useIpv4: null,
+        proxyConfigured: null,
+        useBrowserCookies: null,
       },
       message: "Health check failed",
     });

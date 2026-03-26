@@ -273,5 +273,13 @@ export interface SystemHealth {
     zip: boolean;
     whisperCli: boolean;
   };
+  downloader?: {
+    ytDlpVersion: string | null;
+    retryAttempts: number | null;
+    retryBaseDelayMs: number | null;
+    useIpv4: boolean | null;
+    proxyConfigured: boolean | null;
+    useBrowserCookies: boolean | null;
+  };
   message?: string;
 }
