@@ -196,16 +196,35 @@ const server = Bun.serve({
       return await serveArtifact(pathname);
     }
 
-    // Asset serving (thumbnails, preview videos)
+    // Asset serving
     if (pathname.startsWith("/assets/")) {
       const assetPath = pathname.replace("/assets/", "");
       // Security check
       if (assetPath.includes("..") || assetPath.startsWith("/")) {
         return new Response("Not found", { status: 404 });
       }
-      const fullPath = join(process.cwd(), "assets", assetPath);
+
+      // 1) Frontend build assets (Vite bundles)
+      const frontendAssetPath = join(process.cwd(), "frontend", "dist", "assets", assetPath);
       try {
-        const file = Bun.file(fullPath);
+        const file = Bun.file(frontendAssetPath);
+        if (await file.exists()) {
+          const ext = assetPath.split(".").pop()?.toLowerCase();
+          return new Response(file, {
+            headers: {
+              "content-type": getContentType(ext),
+              "cache-control": "public, max-age=31536000, immutable",
+            },
+          });
+        }
+      } catch (err) {
+        log.error(`Failed to serve frontend asset: ${err}`);
+      }
+
+      // 2) Project media assets (thumbnails, preview videos)
+      const mediaAssetPath = join(process.cwd(), "assets", assetPath);
+      try {
+        const file = Bun.file(mediaAssetPath);
         if (await file.exists()) {
           const ext = assetPath.split(".").pop()?.toLowerCase();
           return new Response(file, {
@@ -216,7 +235,7 @@ const server = Bun.serve({
           });
         }
       } catch (err) {
-        log.error(`Failed to serve asset: ${err}`);
+        log.error(`Failed to serve media asset: ${err}`);
       }
       return new Response("Not found", { status: 404 });
     }
